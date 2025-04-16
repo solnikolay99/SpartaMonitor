@@ -1,7 +1,5 @@
 package ru.spbstu.spartamonitor.data.models;
 
-import ru.spbstu.spartamonitor.data.models.Point;
-
 import java.awt.geom.Line2D;
 import java.util.ArrayList;
 import java.util.List;

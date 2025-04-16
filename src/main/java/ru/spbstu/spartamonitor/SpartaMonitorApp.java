@@ -4,17 +4,20 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import ru.spbstu.spartamonitor.data.ParserEvent;
 
 import java.io.IOException;
 
 public class SpartaMonitorApp extends Application {
 
     private SpartaMonitorController controller;
-    private static final int drawTimeOut = 100;
+    private static final int drawTimeOut = 200;
 
     @Override
     public void start(Stage stage) throws IOException {

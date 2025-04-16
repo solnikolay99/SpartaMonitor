@@ -14,4 +14,10 @@ module ru.spbstu.spartamonitor {
 
     opens ru.spbstu.spartamonitor to javafx.fxml;
     exports ru.spbstu.spartamonitor;
+    exports ru.spbstu.spartamonitor.colorize;
+    exports ru.spbstu.spartamonitor.data;
+    exports ru.spbstu.spartamonitor.data.models;
+    opens ru.spbstu.spartamonitor.data to javafx.fxml;
+    exports ru.spbstu.spartamonitor.logger;
+    opens ru.spbstu.spartamonitor.logger to javafx.fxml;
 }

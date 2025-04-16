@@ -8,13 +8,14 @@ public class Config {
     public static boolean debugDrawing = Boolean.TRUE;  // debug flag
 
     // Задание параметров
-    public static int shapeX = 27;      // высота расчетной области (в см)
-    public static int shapeY = 4;       // ширина расчетной области (в см)
-    public static final int maxBoxX = 1500; // максимальная высота расчетной области (в точках)
-    public static final int maxBoxY = 700;  // максимальная ширина расчетной области (в точках)
-    public static int defaultBoxX = maxBoxX; // базовая высота расчетной области (в точках)
-    public static int defaultBoxY = maxBoxY;  // базовая ширина расчетной области (в точках)
-    public static float coeffXY = 1.0f;
+    public static float shapeX = 27;      // высота расчетной области (в см)
+    public static float shapeY = 4;       // ширина расчетной области (в см)
+    public static float spartaCellSize = 0f;    // размер ячейки (в см)
+    public static float monitorCellSize = 0f;   // размер ячейки (в см)
+    public static final int maxBoxX = 1500;     // максимальная высота расчетной области (в точках)
+    public static final int maxBoxY = 700;      // максимальная ширина расчетной области (в точках)
+    public static int defaultBoxX = maxBoxX;    // базовая высота расчетной области (в точках)
+    public static int defaultBoxY = maxBoxY;    // базовая ширина расчетной области (в точках)
     public static int mainBoxX = defaultBoxX;   // высота расчетной области (в точках)
     public static int mainBoxY = defaultBoxY;   // ширина расчетной области (в точках)
     public static int shiftBoxX = 0;
@@ -25,7 +26,7 @@ public class Config {
     // New config params
     public static String dumpDirPath = "";
 
-    public static final int defaultMultiplayer = 200;
+    public static int defaultMultiplayer = 200;
     public static int multiplayer = defaultMultiplayer;
     public static double kB1 = 1 / 1.38067E-16;
     public static HashMap<String, String> globalParams = new HashMap<>();

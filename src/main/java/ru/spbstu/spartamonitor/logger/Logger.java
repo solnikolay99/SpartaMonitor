@@ -1,4 +1,4 @@
-package ru.spbstu.spartamonitor;
+package ru.spbstu.spartamonitor.logger;
 
 import java.util.HashMap;
 
@@ -9,6 +9,9 @@ public class Logger {
     private static final HashMap<String, Long> timers = new HashMap<>();
 
     public static void startTimer(String timerName) {
+        if (debugDrawing) {
+            //System.out.printf("Start execution for '%s'\n", timerName);
+        }
         timers.put(timerName, System.currentTimeMillis());
     }
 

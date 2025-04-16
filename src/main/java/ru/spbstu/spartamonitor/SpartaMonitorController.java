@@ -1,81 +1,67 @@
 package ru.spbstu.spartamonitor;
 
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.chart.BarChart;
+import javafx.scene.chart.LineChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.paint.Color;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import ru.spbstu.spartamonitor.calculate.Calculation;
+import ru.spbstu.spartamonitor.colorize.ColorizeType;
 import ru.spbstu.spartamonitor.config.Config;
+import ru.spbstu.spartamonitor.data.FrameGenerator;
+import ru.spbstu.spartamonitor.data.ParserEvent;
 import ru.spbstu.spartamonitor.data.models.Point;
 import ru.spbstu.spartamonitor.data.models.Polygon;
+import ru.spbstu.spartamonitor.logger.Logger;
+import ru.spbstu.spartamonitor.screener.Screener;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.image.RenderedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import static ru.spbstu.spartamonitor.colorize.ColorSchema.colorSchema;
 import static ru.spbstu.spartamonitor.config.Config.*;
 
 public class SpartaMonitorController {
 
-    public enum COLORIZE_TYPE {
-        DENSITY, TEMPERATURE
-    }
-
     private final FrameGenerator frameGenerator = new FrameGenerator();
     private final Thread fgThread;
+    private volatile boolean drawIterationFinished = true;
     private Stage mainStage;
     private float zoom = 1f;
     private int playDirection = 1; // направление проигрывания: 1 - в прямом порядке; -1 - в обратном порядке
-    private static final List<Color> colorSchema = new ArrayList<>();
-    private COLORIZE_TYPE colorizeType = COLORIZE_TYPE.DENSITY;
-
-    static {
-        for (int i = 0; i < 60; i++) {
-            colorSchema.add(Color.rgb(127, 127, 255 - i));
-        }
-        for (int i = 0; i < 60; i++) {
-            colorSchema.add(Color.rgb(127, 165 + i, 127));
-        }
-        for (int i = 0; i < 60; i++) {
-            colorSchema.add(Color.rgb(165 + i, 127, 127));
-        }
-        for (int i = 0; i < 60; i++) {
-            colorSchema.add(Color.rgb(127, 195 + i, 195 + i));
-        }
-        for (int i = 0; i < 60; i++) {
-            colorSchema.add(Color.rgb(165 + i, 165 + i, 127));
-        }
-        for (int i = 0; i < 60; i++) {
-            colorSchema.add(Color.rgb(165 + i, 127, 165 + i));
-        }
-
-        //Color.rgb(255, 127, 127);
-    }
+    private ColorizeType colorizeType = ColorizeType.DENSITY;
 
     @FXML
-    public Button buttonInit;
+    protected Button buttonSaveAsPicture;
     @FXML
-    public Button buttonForward;
+    protected Button buttonInit;
     @FXML
-    public Button buttonBackward;
+    protected Button buttonForward;
     @FXML
-    public Button buttonStop;
+    protected Button buttonBackward;
     @FXML
-    public Button buttonPrevStep;
+    protected Button buttonStop;
     @FXML
-    public Button buttonNextStep;
+    protected Button buttonPrevStep;
+    @FXML
+    protected Button buttonNextStep;
     @FXML
     protected Label alertText;
     @FXML
@@ -83,21 +69,20 @@ public class SpartaMonitorController {
     @FXML
     protected Canvas graduationCanvas;
     @FXML
-    protected BarChart<Number, String> densityBarChart;
-    @FXML
-    protected BarChart<String, Number> pumpingBarChart1;
-    @FXML
-    protected BarChart<String, Number> pumpingBarChart2;
-    @FXML
-    protected TextField textInFile;
-    @FXML
-    protected Button buttonInFile;
+    protected LineChart<String, Number> densityLineChart;
     @FXML
     protected TextField textDumpFolder;
     @FXML
     protected Button buttonDumpFolder;
     @FXML
     protected ToggleGroup radioColorizeType;
+    @FXML
+    protected TextField textCountFrames;
+
+    private double animatedCanvasX = 0;
+    private double animatedCanvasY = 0;
+    private int originalShiftX = 0;
+    private int originalShiftY = 0;
 
     public SpartaMonitorController() {
         this.fgThread = new Thread(frameGenerator);
@@ -108,8 +93,32 @@ public class SpartaMonitorController {
         this.mainStage = stage;
 
         animationCanvas.setOnScroll(this::onZooming);
-        //sliderZoom.valueProperty().addListener((event) -> onZooming());
+        animationCanvas.setOnMousePressed(canvasOnMousePressedEventHandler);
+        animationCanvas.setOnMouseDragged(canvasOnMouseDraggedEventHandler);
+
+        textCountFrames.addEventHandler(ParserEvent.CHANGE_TIMEFRAME_COUNT,
+                event -> textCountFrames.setText(String.valueOf(frameGenerator.timeframes.size())));
     }
+
+    EventHandler<MouseEvent> canvasOnMousePressedEventHandler = mouseEvent -> {
+        animatedCanvasX = mouseEvent.getSceneX();
+        animatedCanvasY = mouseEvent.getSceneY();
+        originalShiftX = shiftBoxX;
+        originalShiftY = shiftBoxY;
+    };
+
+    EventHandler<MouseEvent> canvasOnMouseDraggedEventHandler = mouseEvent -> {
+        double offsetX = mouseEvent.getSceneX() - animatedCanvasX;
+        double offsetY = mouseEvent.getSceneY() - animatedCanvasY;
+
+        shiftBoxX = originalShiftX + (int) offsetX;
+        shiftBoxY = originalShiftY + (int) offsetY;
+
+        System.out.printf("Offset by X is %.2f%n", offsetX);
+        System.out.printf("Offset by Y is %.2f%n", offsetY);
+
+        redraw();
+    };
 
     protected void loadConfig() {
         Config.dumpDirPath = textDumpFolder.getText();
@@ -119,12 +128,13 @@ public class SpartaMonitorController {
     protected void onInitiateButtonClick() throws IOException {
         loadConfig();
 
-        frameGenerator.loadInFile(Path.of(this.textInFile.getText()));
+        frameGenerator.setDumpDir(this.textDumpFolder.getText());
+        frameGenerator.loadInFile(Path.of(this.textDumpFolder.getText(), "in.step"));
 
         drawMask();
-        colorizeGraduation(0, 360, 30);
+        colorizeGraduation(ColorizeType.DENSITY);
 
-        frameGenerator.preloadTimeFrames(this.textDumpFolder.getText());
+        frameGenerator.preloadTimeFrames();
 
         alertText.setText("0.0000");
 
@@ -133,6 +143,24 @@ public class SpartaMonitorController {
         buttonStop.setDisable(true);
         buttonPrevStep.setDisable(false);
         buttonNextStep.setDisable(false);
+    }
+
+    @FXML
+    protected void onButtonSaveAsPictureClick() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save File");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG files", "*.png"));
+        File file = fileChooser.showSaveDialog(this.mainStage);
+
+        try {
+            RenderedImage mainImage = Screener.getImageFromCanvas(animationCanvas);
+            RenderedImage graduationImage = Screener.getImageFromCanvas(graduationCanvas);
+            RenderedImage chartImage = Screener.getImageFromCanvas(densityLineChart);
+            RenderedImage outImage = Screener.combineFullScene(mainImage, graduationImage, chartImage);
+            ImageIO.write(outImage, "png", file);
+            System.out.printf("Screen saved to '%s'%n", file.getAbsolutePath());
+        } catch (Exception ignore) {
+        }
     }
 
     @FXML
@@ -184,17 +212,8 @@ public class SpartaMonitorController {
 
     @FXML
     protected void onClose() {
+        this.frameGenerator.isAlive = false;
         this.fgThread.interrupt();
-    }
-
-    @FXML
-    protected void onButtonInFileClick() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Select in file");
-        File selectedFile = fileChooser.showOpenDialog(this.mainStage);
-        if (selectedFile != null) {
-            textInFile.setText(selectedFile.getAbsolutePath());
-        }
     }
 
     @FXML
@@ -209,48 +228,66 @@ public class SpartaMonitorController {
 
     @FXML
     protected void onZooming(ScrollEvent event) {
-        //System.out.printf("Zooming start %n");
-        /*
-        System.out.printf("Zooming end with zoom value %.2f: x=%.2f, y=%.2f %n",
-                event.getDeltaY() / 400, event.getSceneX(), event.getSceneY());
-        */
-        this.zoom += (float) event.getDeltaY() / 400;
+        int denominator = this.zoom > 50 ? 50 : this.zoom > 10 ? 100 : 200;
+        this.zoom += (float) event.getDeltaY() / denominator;
         if (this.zoom < 1) {
             this.zoom = 1;
-        } else if (this.zoom > 10) {
-            this.zoom = 10;
+        } else if (this.zoom > 100) {
+            this.zoom = 100;
         }
         if (zoom == 1) {
-            multiplayer = (int) (defaultMultiplayer * coeffXY);
+            multiplayer = defaultMultiplayer;
             mainBoxX = defaultBoxX;
             mainBoxY = defaultBoxY;
         } else {
-            multiplayer = (int) (defaultMultiplayer * coeffXY * zoom);
+            multiplayer = (int) (defaultMultiplayer * zoom);
             mainBoxX = (int) (defaultBoxX * zoom);
             mainBoxY = (int) (defaultBoxY * zoom);
         }
-        if (mainBoxX > maxBoxX) {
-            mainBoxX = maxBoxX;
+
+        shiftBoxX -= (int) event.getDeltaY();
+        if (shiftBoxX > 0) {
+            shiftBoxX = 0;
         }
-        if (mainBoxY > maxBoxY) {
-            mainBoxY = maxBoxY;
+        //shiftBoxY -= (int) (newCoordX - oldCoordX);
+
+        if (mainBoxX + shiftBoxX > maxBoxX) {
+            mainBoxX = maxBoxX - shiftBoxX;
         }
 
         shiftBoxY = (maxBoxY - mainBoxY) / 2;
 
-        if (!frameGenerator.isRunning && !frameGenerator.showOneIteration) {
-            frameGenerator.setPrevFrame();
-            frameGenerator.showOneIteration = Boolean.TRUE;
-        }
-        //System.out.printf("Zooming end with zoom value %.2f: x = %d; y = %d %n", zoom, mainBoxX, mainBoxY);
+        redraw();
     }
 
     @FXML
     protected void onColorizeTypeChange() {
-        if (((RadioButton) radioColorizeType.getSelectedToggle()).getText().equals("Давление")) {
-            colorizeType = COLORIZE_TYPE.DENSITY;
-        } else if (((RadioButton) radioColorizeType.getSelectedToggle()).getText().equals("Температура")) {
-            colorizeType = COLORIZE_TYPE.TEMPERATURE;
+        switch (((RadioButton) radioColorizeType.getSelectedToggle()).getText()) {
+            case "Давление" -> colorizeType = ColorizeType.DENSITY;
+            case "Температура" -> colorizeType = ColorizeType.TEMPERATURE;
+            case "Скорость" -> colorizeType = ColorizeType.VELOCITY;
+            case "Число Маха" -> colorizeType = ColorizeType.MACH;
+        }
+        colorizeGraduation(colorizeType);
+        redraw();
+    }
+
+    protected void redraw() {
+        if (!frameGenerator.isRunning && !frameGenerator.showOneIteration) {
+            playDirection = 0;
+            frameGenerator.showOneIteration = Boolean.TRUE;
+        }
+    }
+
+    protected void drawAxes() {
+        GraphicsContext gc = this.animationCanvas.getGraphicsContext2D();
+        gc.setFill(Color.GRAY);
+
+        for (int i = 0; i <= shapeX; i++) {
+            gc.fillRect(i * multiplayer - 1, shiftBoxY + mainBoxY - 6, 1, 6);
+        }
+        for (int i = 0; i <= shapeX; i += 5) {
+            gc.fillRect(i * multiplayer - 1, shiftBoxY + mainBoxY - 10, 1, 10);
         }
     }
 
@@ -273,13 +310,22 @@ public class SpartaMonitorController {
                     ys.stream().mapToDouble(Double::doubleValue).toArray(),
                     xs.size());
         }
+
+        drawAxes();
+
+        gc.setFill(Color.LIGHTGRAY);
+        gc.fillRect(0, 0, 45, 22);
+        gc.setFill(Color.WHITE);
+        gc.fillText(String.format("%.2f X", zoom), 5, 15);
     }
 
-    protected void colorizeGraduation(int minValue, int maxValue, int stepValue) {
+    protected void colorizeGraduation(ColorizeType graduation) {
         GraphicsContext gc = this.graduationCanvas.getGraphicsContext2D();
-        int colorStep = (int) (graduationCanvas.getWidth() / colorSchema.size());
-        int countTextSteps = (maxValue - minValue) / stepValue;
-        int textStep = colorSchema.size() * colorStep / countTextSteps;
+        double colorStep = graduationCanvas.getWidth() / colorSchema.size();
+        int countTextSteps = (graduation.maxValue - graduation.minValue) / graduation.stepValue;
+        int countSmallTextSteps = (graduation.maxValue - graduation.minValue) / graduation.smallStepValue;
+        double textStep = colorSchema.size() * colorStep / countTextSteps;
+        double smallTextStep = colorSchema.size() * colorStep / countSmallTextSteps;
 
         gc.clearRect(0, 0, this.graduationCanvas.getWidth(), this.graduationCanvas.getHeight());
 
@@ -288,58 +334,73 @@ public class SpartaMonitorController {
             gc.fillRect(colorStep * i, 40, colorStep, 40);
         }
 
-        gc.setFill(Color.BLACK);
-        gc.fillText(String.valueOf(minValue), 0, 20);
-        gc.fillRect(0, 25, 2, 15);
+        gc.setFill(Color.GRAY);
+        gc.fillText(String.valueOf(graduation.minValue), 0, 25);
+        gc.fillRect(0, 30, 2, 10);
         for (int i = 1; i < countTextSteps; i++) {
-            String text = String.valueOf(minValue + stepValue * i);
-            gc.fillText(text, i * textStep - 7, 20);
-            gc.fillRect(i * textStep - 1, 25, 2, 15);
+            String text = String.valueOf(graduation.minValue + graduation.stepValue * i);
+            gc.fillText(text, i * textStep - 7, 25);
+            gc.fillRect(i * textStep - 1, 30, 2, 10);
         }
-        gc.fillText(String.valueOf(maxValue), countTextSteps * textStep - 25, 20);
-        gc.fillRect(colorStep * colorSchema.size() - 2, 25, 2, 15);
+        gc.fillText(String.valueOf(graduation.maxValue), countTextSteps * textStep - 25, 25);
+        gc.fillRect(colorStep * colorSchema.size() - 2, 30, 2, 10);
+
+        for (int i = 1; i < countSmallTextSteps; i++) {
+            gc.fillRect(i * smallTextStep, 34, 1, 6);
+        }
+
+        gc.fillText(graduation.label, (countTextSteps * textStep) / 2 - 40, 10);
     }
 
-    protected Color getColorForDensity(float density) {
-        if (density > colorSchema.size() - 1) {
-            density = colorSchema.size() - 1;
-        } else if (density < 0) {
-            density = 0;
+    protected Color getColorForType(float value, ColorizeType colorizeType) {
+        if (value > colorizeType.maxValue) {
+            return colorSchema.getLast();
+        } else if (value < colorizeType.minValue) {
+            return colorSchema.getFirst();
         }
-        return colorSchema.get((int) density);
+        return colorSchema.get((int) value * (colorSchema.size() - 1) / (colorizeType.maxValue - colorizeType.minValue));
     }
 
-    protected Color getColorForTemperature(float temperature) {
-        if (temperature > colorSchema.size() - 1) {
-            temperature = colorSchema.size() - 1;
-        } else if (temperature < 0) {
-            temperature = 0;
-        }
-        return colorSchema.get((int) temperature);
-    }
-
-    protected void colorizePoints(GraphicsContext gc, FrameGenerator.NextFrame frame, COLORIZE_TYPE colorizeType) {
-        int countErrors = 0;
+    protected void colorizePoints(GraphicsContext gc, FrameGenerator.Frame frame, ColorizeType colorizeType) {
+        float xLoBorder = -shiftBoxX * monitorCellSize / zoom;
+        float xHiBorder = (maxBoxX - shiftBoxX) * monitorCellSize / zoom;
+        float yLoBorder = -shiftBoxY * monitorCellSize / zoom;
+        float yHiBorder = (maxBoxY - shiftBoxY) * monitorCellSize / zoom;
+        int countPoints = 0;
         for (Number[] point : frame.timeframe.getPoints()) {
+            if (point[1].floatValue() < xLoBorder || xHiBorder < point[1].floatValue()) {
+                continue;
+            } else if (point[2].floatValue() < yLoBorder || yHiBorder < point[2].floatValue()) {
+                continue;
+            }
             try {
-                if (colorizeType == COLORIZE_TYPE.DENSITY) {
-                    gc.setFill(getColorForDensity(frame.timeframe.getGrid().getCells().get((int) point[3].longValue())[0]));
-                } else if (colorizeType == COLORIZE_TYPE.TEMPERATURE) {
-                    gc.setFill(getColorForTemperature(frame.timeframe.getGrid().getCells().get((int) point[3].longValue())[1]));
+                int pointId = point[3].intValue();
+                if (!frame.timeframe.getGrid().getCells().containsKey(pointId)) {
+                    gc.setFill(Color.BLACK);
+                } else if (colorizeType == ColorizeType.DENSITY) {
+                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(pointId)[0], colorizeType));
+                } else if (colorizeType == ColorizeType.TEMPERATURE) {
+                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(pointId)[1], colorizeType));
+                } else if (colorizeType == ColorizeType.VELOCITY) {
+                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(pointId)[2], colorizeType));
+                } else if (colorizeType == ColorizeType.MACH) {
+                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(pointId)[3], colorizeType));
                 }
             } catch (Exception ignore) {
-                gc.setFill(Color.BLACK);
-                countErrors++;
+                gc.setFill(Color.YELLOW);
             }
             gc.fillOval(shiftBoxX + point[1].floatValue() * multiplayer,
                     shiftBoxY + point[2].floatValue() * multiplayer, 1, 1);
+            countPoints++;
         }
-        //System.out.printf("Count errors in colorize method: %d of %d points%n", countErrors, frame.timeframe.getPoints().length);
+        textCountFrames.setText(String.format("%d: %.3f %.3f", countPoints, yLoBorder, yHiBorder));
     }
 
     protected void drawIteration() {
-        if ((frameGenerator.isRunning || frameGenerator.showOneIteration)) {
-            FrameGenerator.NextFrame frame = this.frameGenerator.getFrame(playDirection);
+        if (drawIterationFinished && (frameGenerator.isRunning || frameGenerator.showOneIteration)) {
+            drawIterationFinished = false;
+
+            FrameGenerator.Frame frame = this.frameGenerator.getFrame(playDirection);
 
             Logger.startTimer("Draw iteration");
 
@@ -350,75 +411,66 @@ public class SpartaMonitorController {
 
             drawMask();
 
-            if (colorizeType == COLORIZE_TYPE.DENSITY) {
-                colorizeGraduation(0, 360, 30);
-            } else if (colorizeType == COLORIZE_TYPE.TEMPERATURE) {
-                colorizeGraduation(0, 450, 30);
-            }
-
             colorizePoints(gc, frame, colorizeType);
 
-            this.alertText.setText(String.format("%.0f мкс", (frame.frameNumber + 1) * (Config.tStep / 1e-6 * 100)));
+            this.alertText.setText(String.format("%.0f мкс", (frame.frameNumber + 1) * (tStep / 1e-6 * 100)));
 
             int countPoints = 0;
-            if (densityBarChart.getData().isEmpty()) {
-                XYChart.Series<Number, String> series = new XYChart.Series<>();
-                for (int i = 0; i < Config.mainBoxY; i++) {
-                    series.getData().add(new XYChart.Data<>(0, String.valueOf(i)));
+            float targetDiameter = 0f;
+            if (densityLineChart.getData().isEmpty()) {
+                if (frame.timeframe.getTarget() != null) {
+                    XYChart.Series<String, Number> series = new XYChart.Series<>();
+                    for (int i = 0; i < frame.timeframe.getTarget().length; i++) {
+                        series.getData().add(new XYChart.Data<>(String.valueOf(i * 8 / 10), 0));
+                    }
+                    densityLineChart.getData().add(series);
+
+                    XYChart.Series<String, Number> series2 = new XYChart.Series<>();
+                    series2.getData().add(new XYChart.Data<>("0", 0));
+                    series2.getData().add(new XYChart.Data<>("0", 0));
+                    densityLineChart.getData().add(series2);
+
+                    XYChart.Series<String, Number> series3 = new XYChart.Series<>();
+                    series3.getData().add(new XYChart.Data<>("0", 0));
+                    series3.getData().add(new XYChart.Data<>("0", 0));
+                    densityLineChart.getData().add(series3);
                 }
-                densityBarChart.getData().add(series);
             } else {
-                for (int i = 0; i < frame.listOutPoints.size(); i++) {
-                    XYChart.Data<Number, String> element =
-                            densityBarChart.getData().getFirst().getData().get(i);
-                    element.setXValue(frame.listOutPoints.get(i));
-                    countPoints += frame.listOutPoints.get(i);
+                if (frame.timeframe != null && frame.timeframe.getTarget() != null) {
+                    int maxY = 0;
+                    Calculation.Diameter diameter = Calculation.calculateTargetDiameter(frame.timeframe, 0.5f);
+                    for (int i = 0; i < frame.timeframe.getTarget().length; i++) {
+                        XYChart.Data<String, Number> element =
+                                densityLineChart.getData().getFirst().getData().get(i);
+                        element.setYValue(frame.timeframe.getTarget()[i]);
+                        maxY = Math.max(maxY, frame.timeframe.getTarget()[i]);
+                        countPoints += frame.timeframe.getTarget()[i];
+                    }
+                    densityLineChart.getData().get(1).getData().getFirst().setXValue(String.valueOf(diameter.leftBorder / 10));
+                    densityLineChart.getData().get(1).getData().getFirst().setYValue(0);
+                    densityLineChart.getData().get(1).getData().get(1).setXValue(String.valueOf(diameter.leftBorder / 10));
+                    densityLineChart.getData().get(1).getData().get(1).setYValue(maxY);
+                    densityLineChart.getData().get(2).getData().getFirst().setXValue(String.valueOf(diameter.rightBorder / 10));
+                    densityLineChart.getData().get(2).getData().getFirst().setYValue(0);
+                    densityLineChart.getData().get(2).getData().get(1).setXValue(String.valueOf(diameter.rightBorder / 10));
+                    densityLineChart.getData().get(2).getData().get(1).setYValue(maxY);
+
+                    targetDiameter = (float) diameter.diameter / 8;
+                } else {
+                    densityLineChart.getData().get(0).getData().forEach(element -> element.setYValue(0));
+                    densityLineChart.getData().get(1).getData().forEach(element -> element.setYValue(0));
+                    densityLineChart.getData().get(2).getData().forEach(element -> element.setYValue(0));
                 }
             }
 
-            /*
-            if (pumpingBarChart1.getData().isEmpty()) {
-                XYChart.Series<String, Number> series = new XYChart.Series<>();
-                for (int i = 0; i < Config.mainBoxX; i++) {
-                    series.getData().add(new XYChart.Data<>(String.valueOf(i), 0));
-                }
-                pumpingBarChart1.getData().add(series);
-            } else {
-                for (int i = 0; i < nextFrame.listPumpingPoints1.size(); i++) {
-                    XYChart.Data<String, Number> element =
-                            pumpingBarChart1.getData().getFirst().getData().get(i);
-                    element.setYValue(nextFrame.listPumpingPoints1.get(i));
-                }
-            }
-
-            if (pumpingBarChart2.getData().isEmpty()) {
-                XYChart.Series<String, Number> series = new XYChart.Series<>();
-                for (int i = 0; i < Config.mainBoxX; i++) {
-                    series.getData().add(new XYChart.Data<>(String.valueOf(i), 0));
-                }
-                pumpingBarChart2.getData().add(series);
-            } else {
-                for (int i = 0; i < nextFrame.listPumpingPoints2.size(); i++) {
-                    XYChart.Data<String, Number> element =
-                            pumpingBarChart2.getData().getFirst().getData().get(i);
-                    element.setYValue(-nextFrame.listPumpingPoints2.get(i));
-                }
-            }
-
-            densityBarChart.setTitle(String.format("Плотность частиц: %d", countPoints));
-            */
+            densityLineChart.setTitle(String.format("Плотность частиц: %d%n" +
+                    "Диаметр: %.1f мм", countPoints, targetDiameter));
 
             Toolkit.getDefaultToolkit().sync();
 
-            /*
-            float iterationTime = Logger.releaseTimer("Draw iteration");
-            if (iterationTime < frameTimeDelta) {
-                try {
-                    Thread.sleep((int) (iterationTime - frameTimeDelta));
-                } catch (Exception ignore) {
-                }
-            }
-            /**/
+            Logger.releaseTimer("Draw iteration");
+
+            drawIterationFinished = true;
         }
     }
 }

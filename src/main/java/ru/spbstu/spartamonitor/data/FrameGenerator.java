@@ -1,13 +1,14 @@
-package ru.spbstu.spartamonitor;
+package ru.spbstu.spartamonitor.data;
 
-import ru.spbstu.spartamonitor.data.Parser;
-import ru.spbstu.spartamonitor.data.models.Timeframe;
+import ru.spbstu.spartamonitor.logger.Logger;
 import ru.spbstu.spartamonitor.config.Config;
 import ru.spbstu.spartamonitor.data.models.Polygon;
+import ru.spbstu.spartamonitor.data.models.Timeframe;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class FrameGenerator implements Runnable {
@@ -18,16 +19,40 @@ public class FrameGenerator implements Runnable {
     private final Object lock = new Object();
 
     private final Parser parser = new Parser();
+    public volatile boolean isAlive = true;
+    private volatile boolean flgPreload = false;
 
-    List<Timeframe> timeframes = new ArrayList<>();
+    public List<Timeframe> timeframes = Collections.synchronizedList(new ArrayList<>());
     private int curFrame = 0;
-    private ArrayList<Polygon> listSurfs;
+    private List<Polygon> listSurfs;
 
     public FrameGenerator() {
     }
 
+    public void setDumpDir(String dumpDir) throws IOException {
+        this.parser.setDumpDir(dumpDir);
+    }
+
     @Override
     public void run() {
+        while (isAlive) {
+            if (flgPreload) {
+                Logger.startTimer("Get all timeframe data");
+                try {
+                    this.timeframes = this.parser.parsAllDumps();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                Logger.releaseTimer("Get all timeframe data");
+
+                flgPreload = false;
+            } else {
+                try {
+                    Thread.sleep(100);
+                } catch (Exception ignore) {
+                }
+            }
+        }
     }
 
     public void startOneIteration() {
@@ -43,36 +68,21 @@ public class FrameGenerator implements Runnable {
         this.isRunning = Boolean.FALSE;
     }
 
-    public void preloadTimeFrames(String dumpDir) throws IOException {
-        Logger.startTimer("Get all timeframe data");
-
-        this.parser.setDumpDir(dumpDir);
-        this.timeframes = this.parser.parsAllDumps();
-
-        Logger.releaseTimer("Get all timeframe data");
+    public void preloadTimeFrames() {
+        flgPreload = true;
     }
 
-    public void setPrevFrame() {
-        this.curFrame--;
-    }
-
-    public static class NextFrame {
+    public static class Frame {
         public Timeframe timeframe;
-        public ArrayList<Integer> listOutPoints;
-        public ArrayList<Integer> listPumpingPoints1;
-        public ArrayList<Integer> listPumpingPoints2;
         public int frameNumber = 0;
 
-        public NextFrame() {
+        public Frame() {
             this.timeframe = new Timeframe();
-            this.listOutPoints = new ArrayList<>();
-            this.listPumpingPoints1 = new ArrayList<>();
-            this.listPumpingPoints2 = new ArrayList<>();
         }
     }
 
-    public NextFrame getFrame(int countSteps) {
-        NextFrame nextFrame = new NextFrame();
+    public Frame getFrame(int countSteps) {
+        Frame frame = new Frame();
         this.curFrame += countSteps;
         if (this.curFrame >= this.timeframes.size()) {
             this.curFrame = 0;
@@ -81,14 +91,14 @@ public class FrameGenerator implements Runnable {
         }
         if (this.isRunning || this.showOneIteration) {
             synchronized (lock) {
-                nextFrame.timeframe = this.timeframes.get(this.curFrame);
+                frame.timeframe = this.timeframes.get(this.curFrame);
             }
         }
-        nextFrame.frameNumber = this.curFrame;
-        return nextFrame;
+        frame.frameNumber = this.curFrame;
+        return frame;
     }
 
-    public ArrayList<Polygon> getListSurfs() {
+    public List<Polygon> getListSurfs() {
         return listSurfs;
     }
 
@@ -99,7 +109,7 @@ public class FrameGenerator implements Runnable {
     }
 
     public void loadSurfs(Path rootDir) throws IOException {
-        listSurfs = new ArrayList<>();
+        listSurfs = Collections.synchronizedList(new ArrayList<>());
         for (String filePath : Config.surfFiles) {
             ArrayList<Polygon> polygons = this.parser.parsSurfFile(Path.of(rootDir.toString(), filePath));
             if (!polygons.isEmpty()) {

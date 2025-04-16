@@ -1,14 +1,13 @@
 package ru.spbstu.spartamonitor.data;
 
-import ru.spbstu.spartamonitor.Logger;
+import ru.spbstu.spartamonitor.logger.Logger;
 import ru.spbstu.spartamonitor.config.Config;
 import ru.spbstu.spartamonitor.data.models.Grid;
 import ru.spbstu.spartamonitor.data.models.Point;
 import ru.spbstu.spartamonitor.data.models.Polygon;
 import ru.spbstu.spartamonitor.data.models.Timeframe;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -21,6 +20,12 @@ public class Parser {
     private static final String dumpFilePattern = "(dump.)([0-9]+)(.txt)";
     private static final String gridFilePattern = "(.*grid.)([0-9]+)(.txt)";
     private static final String targetFilePattern = "(.*target_sum.)([0-9]+)(.txt)";
+
+    /**
+     * Constants
+     */
+    float gamma = 5f / 3f; // показатель адиабаты
+    float R = 2077f; // универсальная газовая постоянная для He (в Дж / (кг * К))
 
     public Parser() {
     }
@@ -66,11 +71,13 @@ public class Parser {
         ArrayList<Timeframe> timeFrames = new ArrayList<>(allFrames.keySet().size());
 
         List<Integer> sortedKeys = allFrames.keySet().stream().sorted().toList();
-        sortedKeys = sortedKeys.subList(0, 20);
+        sortedKeys = sortedKeys.subList(0, 50);
         for (Integer frame : sortedKeys) {
-            Logger.startTimer(String.format("Parse frame %s", frame));
-            timeFrames.add(this.parseTimeFrame(allFrames.get(frame)));
-            //Logger.releaseTimer(String.format("Parse frame %s", frame));
+            Logger.startTimer("Pars data to timeframe");
+            Timeframe timeframe = this.parseTimeFrame(allFrames.get(frame));
+            Logger.releaseTimer("Pars data to timeframe");
+            timeFrames.add(timeframe);
+            //new ParserEvent(ParserEvent.CHANGE_TIMEFRAME_COUNT);
         }
 
         return timeFrames;
@@ -128,14 +135,20 @@ public class Parser {
         int idIndex = headers.indexOf("id");
         int pIndex = headers.indexOf("c_gTemp[1]");
         int tIndex = headers.indexOf("c_gTemp[2]");
+        int vIndex = headers.indexOf("c_gridP[1]");
 
         for (int i = 9; i < fileLines.size(); i++) {
             String[] params = fileLines.get(i).split(" ");
+            float temperature = Float.parseFloat(params[tIndex]);
+            float cs = (float) Math.sqrt(gamma * R * temperature);
+            float u = Math.abs(Float.parseFloat(params[vIndex]) / 100);
             grid.addCell(
                     Integer.parseInt(params[idIndex]),
                     new Float[]{
-                            Float.parseFloat(params[pIndex]),
-                            Float.parseFloat(params[tIndex])
+                            Float.parseFloat(params[pIndex]),   // density in grid
+                            temperature,                        // temperature in grid
+                            u,                                  // directed velocity by x in grid
+                            u / cs                              // Mach value
                     }
             );
         }
@@ -147,11 +160,11 @@ public class Parser {
 
     private Integer[] parseTarget(String fileName) throws IOException {
         List<String> fileLines = Files.readAllLines(Path.of(this.dumpDir, fileName));
-        Integer[] bars = new Integer[fileLines.size() - 9];
+        Integer[] bars = new Integer[fileLines.size()];
 
-        for (int i = 9; i < fileLines.size(); i++) {
+        for (int i = 0; i < fileLines.size(); i++) {
             String[] params = fileLines.get(i).split(" ");
-            bars[i - 9] = Integer.parseInt(params[1]);
+            bars[i] = Integer.parseInt(params[1]);
         }
 
         fileLines.clear();
@@ -181,24 +194,23 @@ public class Parser {
                 }
                 case "timestep" -> Config.tStep = Float.parseFloat(params[1].strip());
                 case "create_box" -> {
-                    Config.shapeX = (int) (Float.parseFloat(params[2].strip()) - Float.parseFloat(params[1].strip()));
-                    Config.shapeY = (int) (Float.parseFloat(params[4].strip()) - Float.parseFloat(params[3].strip()));
+                    Config.shapeX = Float.parseFloat(params[2].strip()) - Float.parseFloat(params[1].strip());
+                    Config.shapeY = Float.parseFloat(params[4].strip()) - Float.parseFloat(params[3].strip());
                 }
                 case "create_grid" -> {
-                    int boxX = Integer.parseInt(params[1].strip());
-                    int boxY = Integer.parseInt(params[2].strip());
-                    float coeffX = (float) Config.maxBoxX / ((float) boxX);
-                    float coeffY = (float) Config.maxBoxY / ((float) boxY);
+                    Config.spartaCellSize = Config.shapeX / Integer.parseInt(params[1].strip());
+                    Config.monitorCellSize = Config.shapeX / Config.maxBoxX;
+                    float coeffX = (float) Config.maxBoxX / Config.shapeX;
+                    float coeffY = (float) Config.maxBoxY / Config.shapeY;
+                    Config.defaultMultiplayer = (int) Math.min(coeffX, coeffY);
                     if (coeffX < coeffY) {
-                        Config.coeffXY = coeffX;
-                        Config.defaultBoxY = (int) (Config.maxBoxY * Config.coeffXY);
+                        Config.defaultBoxY = (int) (Config.shapeY * Config.defaultMultiplayer);
                         Config.shiftBoxY = (Config.maxBoxY - Config.defaultBoxY) / 2;
                     } else {
-                        Config.coeffXY = coeffY;
-                        Config.defaultBoxX = (int) (Config.maxBoxX * Config.coeffXY);
+                        Config.defaultBoxX = (int) (Config.shapeX * Config.defaultMultiplayer);
                         Config.shiftBoxX = (Config.maxBoxX - Config.defaultBoxX) / 2;
                     }
-                    Config.multiplayer = (int) (Config.defaultMultiplayer * Config.coeffXY);
+                    Config.multiplayer = Config.defaultMultiplayer;
                     Config.mainBoxX = Config.defaultBoxX;
                     Config.mainBoxY = Config.defaultBoxY;
                 }
