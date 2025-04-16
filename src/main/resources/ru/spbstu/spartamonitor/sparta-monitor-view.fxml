@@ -1,162 +1,95 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.*?>
-<?import javafx.scene.canvas.*?>
-<?import javafx.scene.chart.*?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.NumberAxis?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
-<VBox alignment="CENTER_LEFT" minHeight="800.0" minWidth="1920.0" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.spbstu.spartamonitor.SpartaMonitorController">
+<?import ru.spbstu.spartamonitor.canvas.DensityChart?>
+<?import ru.spbstu.spartamonitor.canvas.GraduationCanvas?>
+<?import ru.spbstu.spartamonitor.canvas.MainCanvas?>
+<VBox alignment="CENTER_LEFT" minHeight="800.0" minWidth="1920.0" spacing="20.0"
+      xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="ru.spbstu.spartamonitor.SpartaMonitorController">
     <padding>
-        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
     </padding>
 
-
-    <!--
-    <TabPane fx:id="tabPanVisualization" maxHeight="1080.0" maxWidth="1920.0" tabClosingPolicy="UNAVAILABLE">
-        <Tab fx:id="tabVisualization" text="Визуализация">
-
-        </Tab>
-        <Tab text="Параметры">
-            <GridPane layoutX="27.0" layoutY="14.0">
-                <columnConstraints>
-                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="30.0" />
-                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="30.0" />
-                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="30.0" />
-                    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="30.0" />
-                </columnConstraints>
-                <rowConstraints>
-                    <RowConstraints minHeight="1.0" prefHeight="15.0" vgrow="SOMETIMES" />
-                    <RowConstraints minHeight="1.0" prefHeight="15.0" vgrow="SOMETIMES" />
-                    <RowConstraints minHeight="1.0" prefHeight="15.0" vgrow="SOMETIMES" />
-                    <RowConstraints minHeight="1.0" prefHeight="15.0" vgrow="SOMETIMES" />
-                    <RowConstraints minHeight="1.0" prefHeight="15.0" vgrow="SOMETIMES" />
-                    <RowConstraints minHeight="1.0" prefHeight="15.0" vgrow="SOMETIMES" />
-                </rowConstraints>
-
-                <Label text="Общее количество частиц" />
-                <Spinner fx:id="totalSize" amountToStepBy="1" editable="true" initialValue="20000" max="10000000" min="1" GridPane.columnIndex="1" />
-
-                <Label text="Максимальное количество частиц в ячейке" GridPane.rowIndex="1" />
-                <Spinner fx:id="maxPointsPerCell" amountToStepBy="1" editable="true" initialValue="7" max="10000" min="1" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-
-                <Label text="Координаты сопла (в см): x0, x1, y0, y1" GridPane.columnIndex="2" GridPane.rowIndex="0" />
-                <VBox alignment="CENTER_LEFT" GridPane.columnIndex="3" GridPane.rowIndex="0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
-                    <Spinner fx:id="capillaryX0" amountToStepBy="0.0001" editable="true" initialValue="0.0" max="10000.0" min="0.0001" />
-                    <Spinner fx:id="capillaryX1" amountToStepBy="0.0001" editable="true" initialValue="1.0" max="10000.0" min="0.0001" />
-                    <Spinner fx:id="capillaryY0" editable="true">
-                        <valueFactory>
-                            <SpinnerValueFactory.DoubleSpinnerValueFactory amountToStepBy="0.0001" initialValue="1.0" max="100.0" min="0.0001" />
-                        </valueFactory>
-                    </Spinner>
-                    <Spinner fx:id="capillaryY1" editable="true">
-                        <valueFactory>
-                            <SpinnerValueFactory.DoubleSpinnerValueFactory amountToStepBy="0.0001" initialValue="1.0" max="100.0" min="0.0001" />
-                        </valueFactory>
-                    </Spinner>
-                </VBox>
-
-                <Label text="Скорость в сопле, см/с" GridPane.rowIndex="2" />
-                <Spinner fx:id="vPot" amountToStepBy="1" editable="true" initialValue="100000" max="300000000000.0" min="1" GridPane.columnIndex="1" GridPane.rowIndex="2" />
-
-                <Label text="Скорость при выходе из сопла, cм/с" GridPane.rowIndex="3" />
-                <Spinner fx:id="v0" amountToStepBy="1" editable="true" initialValue="100000" max="300000000000.0" min="1" GridPane.columnIndex="1" GridPane.rowIndex="3" />
-
-                <Label text="Угол разлёта частиц при выходе из сопла, градусы" GridPane.columnIndex="2" GridPane.rowIndex="1" />
-                <Spinner fx:id="angle0" amountToStepBy="1" editable="true" initialValue="360" max="360" min="0" GridPane.columnIndex="3" GridPane.rowIndex="1" />
-
-                <Label text="Временной шаг, 1e-8 сек" GridPane.rowIndex="4" />
-                <Spinner fx:id="tStep" amountToStepBy="1" editable="true" initialValue="5" max="100" min="1" GridPane.columnIndex="1" GridPane.rowIndex="4" />
-
-                <Label text="Файлы маски" GridPane.rowIndex="5" />
-                <ListView fx:id="surfFiles" prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="1" GridPane.rowIndex="5" />
-            </GridPane>
-        </Tab>
-    </TabPane>
-    -->
-
-    <VBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
-        <HBox alignment="CENTER" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
+    <VBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
+          xmlns:fx="http://javafx.com/fxml/1">
+        <HBox alignment="CENTER" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
+              xmlns:fx="http://javafx.com/fxml/1">
             <Label text="Время:">
                 <HBox.margin>
-                    <Insets top="10.0" />
+                    <Insets top="10.0"/>
                 </HBox.margin>
             </Label>
             <Label fx:id="alertText" text="0.0000 мкс">
                 <HBox.margin>
-                    <Insets top="10.0" />
+                    <Insets top="10.0"/>
                 </HBox.margin>
             </Label>
         </HBox>
-        <HBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
-            <VBox alignment="BASELINE_CENTER" minHeight="800" minWidth="1500" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
-                <Canvas fx:id="animationCanvas" height="700.0" width="1500.0">
+        <HBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
+              xmlns:fx="http://javafx.com/fxml/1">
+            <VBox alignment="BASELINE_CENTER" minHeight="800" minWidth="1500" spacing="20.0"
+                  xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
+                <MainCanvas fx:id="animationCanvas" height="700.0" width="1500.0">
                     <VBox.margin>
-                        <Insets left="42.0" />
+                        <Insets left="42.0"/>
                     </VBox.margin>
-                </Canvas>
-                <Canvas fx:id="graduationCanvas" height="80.0" width="1500.0">
+                </MainCanvas>
+                <GraduationCanvas fx:id="graduationCanvas" height="80.0" width="1500.0">
                     <VBox.margin>
-                        <Insets left="42.0" />
+                        <Insets left="42.0"/>
                     </VBox.margin>
-                </Canvas>
-                <!--
-                <BarChart fx:id="pumpingBarChart1" animated="false" horizontalGridLinesVisible="false" horizontalZeroLineVisible="false" legendVisible="false" prefHeight="200.0" prefWidth="1000.0" titleSide="LEFT" verticalGridLinesVisible="false" verticalZeroLineVisible="false">
-                    <xAxis>
-                        <CategoryAxis side="BOTTOM" />
-                    </xAxis>
-                    <yAxis>
-                        <NumberAxis maxWidth="30.0" minWidth="30.0" prefWidth="30.0" side="LEFT" />
-                    </yAxis>
-                </BarChart>
-                -->
-                <!--
-                <BarChart fx:id="pumpingBarChart2" animated="false" horizontalGridLinesVisible="false" horizontalZeroLineVisible="false" legendVisible="false" prefHeight="200.0" prefWidth="1000.0" titleSide="LEFT" verticalGridLinesVisible="false" verticalZeroLineVisible="false">
-                    <xAxis>
-                        <CategoryAxis side="TOP" />
-                    </xAxis>
-                    <yAxis>
-                        <NumberAxis maxWidth="30.0" minWidth="30.0" prefWidth="30.0" side="LEFT" />
-                    </yAxis>
-                </BarChart>
-                -->
+                </GraduationCanvas>
             </VBox>
-            <LineChart fx:id="densityLineChart" animated="false" horizontalGridLinesVisible="false" horizontalZeroLineVisible="false" legendVisible="false" prefHeight="400.0" prefWidth="400.0" stylesheets="@main.css" title="Плотность частиц: 0" verticalGridLinesVisible="false" verticalZeroLineVisible="false">
+            <DensityChart fx:id="densityChart" animated="false" horizontalGridLinesVisible="false"
+                          horizontalZeroLineVisible="false" legendVisible="false" prefHeight="400.0" prefWidth="400.0"
+                          stylesheets="@main.css" title="Плотность частиц: 0" verticalGridLinesVisible="false"
+                          verticalZeroLineVisible="false">
                 <xAxis>
-                    <CategoryAxis side="LEFT" />
+                    <CategoryAxis side="LEFT"/>
                 </xAxis>
                 <yAxis>
-                    <NumberAxis side="BOTTOM" />
+                    <NumberAxis side="BOTTOM"/>
                 </yAxis>
                 <HBox.margin>
-                    <Insets bottom="140.0" top="160.0" />
+                    <Insets bottom="140.0" top="160.0"/>
                 </HBox.margin>
-            </LineChart>
+            </DensityChart>
         </HBox>
     </VBox>
 
-    <HBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
-        <TextField fx:id="textDumpFolder" text="D:\dumps" />
-        <Button fx:id="buttonDumpFolder" mnemonicParsing="false" onAction="#onButtonDumpFolderClick" text="Папка с дампом" />
-        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER" />
-        <Button fx:id="buttonInit" onAction="#onInitiateButtonClick" text="Инициализация" />
-        <TextField fx:id="textCountFrames" prefWidth="40.0" text="0" />
-        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER" />
-        <Button fx:id="buttonSaveAsPicture" mnemonicParsing="false" onAction="#onButtonSaveAsPictureClick" text="Сделать скрин" />
-        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER" />
-        <Button fx:id="buttonBackward" disable="true" onAction="#onBackwardIterationsButtonClick" text="Назад" />
-        <Button fx:id="buttonPrevStep" disable="true" onAction="#onPrevIterationButtonClick" text="Шаг назад" />
-        <Button fx:id="buttonStop" disable="true" onAction="#onStopIterationsButtonClick" text="Стоп" />
-        <Button fx:id="buttonNextStep" disable="true" onAction="#onNextIterationButtonClick" text="Шаг вперёд" />
-        <Button fx:id="buttonForward" disable="true" onAction="#onForwardIterationsButtonClick" text="Вперёд" />
-        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER" />
+    <HBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
+          xmlns:fx="http://javafx.com/fxml/1">
+        <TextField fx:id="textDumpFolder" text="D:\dumps"/>
+        <Button fx:id="buttonDumpFolder" mnemonicParsing="false" onAction="#onButtonDumpFolderClick"
+                text="Папка с дампом"/>
+        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
+        <Button fx:id="buttonInit" onAction="#onInitiateButtonClick" text="Инициализация"/>
+        <TextField fx:id="textCountFrames" prefWidth="60.0" text="0"/>
+        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
+        <Button fx:id="buttonSaveAsPicture" mnemonicParsing="false" onAction="#onButtonSaveAsPictureClick"
+                text="Сделать скрин"/>
+        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
+        <Button fx:id="buttonBackward" disable="true" onAction="#onBackwardIterationsButtonClick" text="Назад"/>
+        <Button fx:id="buttonPrevStep" disable="true" onAction="#onPrevIterationButtonClick" text="Шаг назад"/>
+        <Button fx:id="buttonStop" disable="true" onAction="#onStopIterationsButtonClick" text="Стоп"/>
+        <Button fx:id="buttonNextStep" disable="true" onAction="#onNextIterationButtonClick" text="Шаг вперёд"/>
+        <Button fx:id="buttonForward" disable="true" onAction="#onForwardIterationsButtonClick" text="Вперёд"/>
+        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
         <RadioButton mnemonicParsing="false" onAction="#onColorizeTypeChange" selected="true" text="Давление">
             <toggleGroup>
-                <ToggleGroup fx:id="radioColorizeType" />
+                <ToggleGroup fx:id="radioColorizeType"/>
             </toggleGroup>
         </RadioButton>
-        <RadioButton mnemonicParsing="false" onAction="#onColorizeTypeChange" text="Температура" toggleGroup="$radioColorizeType" />
-        <RadioButton mnemonicParsing="false" onAction="#onColorizeTypeChange" text="Скорость" toggleGroup="$radioColorizeType" />
-        <RadioButton mnemonicParsing="false" onAction="#onColorizeTypeChange" text="Число Маха" toggleGroup="$radioColorizeType" />
+        <RadioButton mnemonicParsing="false" onAction="#onColorizeTypeChange" text="Температура"
+                     toggleGroup="$radioColorizeType"/>
+        <RadioButton mnemonicParsing="false" onAction="#onColorizeTypeChange" text="Скорость"
+                     toggleGroup="$radioColorizeType"/>
+        <RadioButton mnemonicParsing="false" onAction="#onColorizeTypeChange" text="Число Маха"
+                     toggleGroup="$radioColorizeType"/>
     </HBox>
 </VBox>

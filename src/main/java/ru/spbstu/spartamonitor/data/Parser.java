@@ -1,13 +1,16 @@
 package ru.spbstu.spartamonitor.data;
 
-import ru.spbstu.spartamonitor.logger.Logger;
 import ru.spbstu.spartamonitor.config.Config;
 import ru.spbstu.spartamonitor.data.models.Grid;
 import ru.spbstu.spartamonitor.data.models.Point;
 import ru.spbstu.spartamonitor.data.models.Polygon;
 import ru.spbstu.spartamonitor.data.models.Timeframe;
+import ru.spbstu.spartamonitor.eventbus.EventBusFactory;
+import ru.spbstu.spartamonitor.events.ParserEvent;
+import ru.spbstu.spartamonitor.logger.Logger;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -77,7 +80,7 @@ public class Parser {
             Timeframe timeframe = this.parseTimeFrame(allFrames.get(frame));
             Logger.releaseTimer("Pars data to timeframe");
             timeFrames.add(timeframe);
-            //new ParserEvent(ParserEvent.CHANGE_TIMEFRAME_COUNT);
+            EventBusFactory.getEventBus().post(new ParserEvent(sortedKeys.size(), timeFrames.size()));
         }
 
         return timeFrames;

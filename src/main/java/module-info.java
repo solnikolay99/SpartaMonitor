@@ -11,6 +11,7 @@ module ru.spbstu.spartamonitor {
     requires eu.hansolo.tilesfx;
     requires com.almasb.fxgl.all;
     requires java.desktop;
+    requires com.google.common;
 
     opens ru.spbstu.spartamonitor to javafx.fxml;
     exports ru.spbstu.spartamonitor;
@@ -20,4 +21,8 @@ module ru.spbstu.spartamonitor {
     opens ru.spbstu.spartamonitor.data to javafx.fxml;
     exports ru.spbstu.spartamonitor.logger;
     opens ru.spbstu.spartamonitor.logger to javafx.fxml;
+    exports ru.spbstu.spartamonitor.events;
+    opens ru.spbstu.spartamonitor.events to javafx.fxml;
+    exports ru.spbstu.spartamonitor.listeners;
+    exports ru.spbstu.spartamonitor.canvas;
 }

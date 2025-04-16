@@ -4,13 +4,14 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
-import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import ru.spbstu.spartamonitor.data.ParserEvent;
+import ru.spbstu.spartamonitor.eventbus.EventBusFactory;
+import ru.spbstu.spartamonitor.events.DrawEvent;
+import ru.spbstu.spartamonitor.listeners.DrawListener;
+import ru.spbstu.spartamonitor.listeners.ParserListener;
 
 import java.io.IOException;
 
@@ -30,10 +31,13 @@ public class SpartaMonitorApp extends Application {
         this.controller = fxmlLoader.getController();
         this.controller.setMainStage(stage);
 
+        EventBusFactory.getEventBus().register(new ParserListener(this.controller));
+        EventBusFactory.getEventBus().register(new DrawListener(this.controller));
+
         Timeline timeline = new Timeline(
                 new KeyFrame(
                         Duration.seconds(0),
-                        event -> this.controller.drawIteration()
+                        event -> EventBusFactory.getEventBus().post(new DrawEvent())
                 ),
                 new KeyFrame(Duration.millis(drawTimeOut))
         );
