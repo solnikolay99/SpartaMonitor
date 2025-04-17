@@ -37,7 +37,7 @@ public class SpartaMonitorApp extends Application {
         Timeline timeline = new Timeline(
                 new KeyFrame(
                         Duration.seconds(0),
-                        event -> EventBusFactory.getEventBus().post(new DrawEvent())
+                        event -> EventBusFactory.getEventBus().post(new DrawEvent(null))
                 ),
                 new KeyFrame(Duration.millis(drawTimeOut))
         );

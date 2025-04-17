@@ -1,6 +1,4 @@
 package ru.spbstu.spartamonitor.events;
 
-public class DrawEvent {
-    public DrawEvent() {
-    }
+public record DrawEvent(Integer direction) {
 }

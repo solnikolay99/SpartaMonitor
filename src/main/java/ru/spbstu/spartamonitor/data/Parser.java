@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class Parser {
 
@@ -23,6 +24,7 @@ public class Parser {
     private static final String dumpFilePattern = "(dump.)([0-9]+)(.txt)";
     private static final String gridFilePattern = "(.*grid.)([0-9]+)(.txt)";
     private static final String targetFilePattern = "(.*target_sum.)([0-9]+)(.txt)";
+    private final Map<Integer, String[]> allFrames = new HashMap<>();
 
     /**
      * Constants
@@ -50,12 +52,11 @@ public class Parser {
                 .collect(Collectors.toMap(x -> Integer.parseInt(x.replaceAll(filePattern, "$2")), x -> x));
     }
 
-    private Map<Integer, String[]> getAllTimeFrames() {
+    public void getAllTimeFrames() {
         Map<Integer, String> dumpFrames = this.getTimeFrames(dumpFilePattern);
         Map<Integer, String> gridFrames = this.getTimeFrames(gridFilePattern);
         Map<Integer, String> targetFrames = this.getTimeFrames(targetFilePattern);
 
-        HashMap<Integer, String[]> allFrames = new HashMap<>();
         for (Integer key : dumpFrames.keySet()) {
             allFrames.put(key, new String[]{dumpFrames.get(key), null, null});
             if (gridFrames.containsKey(key)) {
@@ -65,25 +66,18 @@ public class Parser {
                 allFrames.get(key)[2] = targetFrames.get(key);
             }
         }
-
-        return allFrames;
     }
 
-    public List<Timeframe> parsAllDumps() throws IOException {
-        Map<Integer, String[]> allFrames = this.getAllTimeFrames();
-        ArrayList<Timeframe> timeFrames = new ArrayList<>(allFrames.keySet().size());
-
+    public void parsDumps(List<Timeframe> timeFrames, int startFrame, int endFrame) throws IOException {
+        IntStream.range(0, allFrames.size()).<Timeframe>mapToObj(i -> null).forEach(timeFrames::add);
         List<Integer> sortedKeys = allFrames.keySet().stream().sorted().toList();
-        sortedKeys = sortedKeys.subList(0, 50);
-        for (Integer frame : sortedKeys) {
+        for (int i = startFrame; i < endFrame; i++) {
             Logger.startTimer("Pars data to timeframe");
-            Timeframe timeframe = this.parseTimeFrame(allFrames.get(frame));
+            Timeframe timeframe = this.parseTimeFrame(allFrames.get(sortedKeys.get(i)));
             Logger.releaseTimer("Pars data to timeframe");
-            timeFrames.add(timeframe);
-            EventBusFactory.getEventBus().post(new ParserEvent(sortedKeys.size(), timeFrames.size()));
+            timeFrames.set(i, timeframe);
+            EventBusFactory.getEventBus().post(new ParserEvent((endFrame - startFrame), (startFrame + i + 1)));
         }
-
-        return timeFrames;
     }
 
     private Timeframe parseTimeFrame(String[] files) throws IOException {
@@ -151,6 +145,7 @@ public class Parser {
                             Float.parseFloat(params[pIndex]),   // density in grid
                             temperature,                        // temperature in grid
                             u,                                  // directed velocity by x in grid
+                            cs,                                 // sound velocity
                             u / cs                              // Mach value
                     }
             );

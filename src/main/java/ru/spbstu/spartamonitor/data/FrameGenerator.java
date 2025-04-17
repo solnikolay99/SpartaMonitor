@@ -39,7 +39,8 @@ public class FrameGenerator implements Runnable {
             if (flgPreload) {
                 Logger.startTimer("Get all timeframe data");
                 try {
-                    this.timeframes = this.parser.parsAllDumps();
+                    this.parser.getAllTimeFrames();
+                    this.parser.parsDumps(this.timeframes, 0, 50);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -57,6 +58,10 @@ public class FrameGenerator implements Runnable {
 
     public void startOneIteration() {
         this.isRunning = Boolean.FALSE;
+        this.showOneIteration = Boolean.TRUE;
+    }
+
+    public void showOneIteration() {
         this.showOneIteration = Boolean.TRUE;
     }
 
