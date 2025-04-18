@@ -1,14 +1,15 @@
 package ru.spbstu.spartamonitor.data;
 
-import ru.spbstu.spartamonitor.logger.Logger;
 import ru.spbstu.spartamonitor.config.Config;
 import ru.spbstu.spartamonitor.data.models.Polygon;
 import ru.spbstu.spartamonitor.data.models.Timeframe;
+import ru.spbstu.spartamonitor.logger.Logger;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 public class FrameGenerator implements Runnable {
@@ -24,7 +25,9 @@ public class FrameGenerator implements Runnable {
 
     public List<Timeframe> timeframes = Collections.synchronizedList(new ArrayList<>());
     private int curFrame = 0;
-    private List<Polygon> listSurfs;
+    public HashMap<String, List<Polygon>> surfs = new HashMap<>();
+    public static HashMap<Integer, HashMap<Integer, Integer>> gridSchema = new HashMap<>();
+    public static HashMap<Integer, HashMap<Integer, Integer>> inSurfSchema = new HashMap<>();
 
     public FrameGenerator() {
     }
@@ -40,7 +43,7 @@ public class FrameGenerator implements Runnable {
                 Logger.startTimer("Get all timeframe data");
                 try {
                     this.parser.getAllTimeFrames();
-                    this.parser.parsDumps(this.timeframes, 0, 50);
+                    this.parser.parsDumps(this.timeframes, 0, 20);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -103,22 +106,76 @@ public class FrameGenerator implements Runnable {
         return frame;
     }
 
-    public List<Polygon> getListSurfs() {
-        return listSurfs;
+    public HashMap<String, List<Polygon>> getSurfs() {
+        return surfs;
     }
 
     public void loadInFile(Path filePath) throws IOException {
         curFrame = 0;
         this.parser.parsInFile(filePath);
+        loadGridSchema(filePath.getParent());
         loadSurfs(filePath.getParent());
+        excludeOutSurfGridCells();
     }
 
-    public void loadSurfs(Path rootDir) throws IOException {
-        listSurfs = Collections.synchronizedList(new ArrayList<>());
+    protected void loadSurfs(Path rootDir) throws IOException {
+        surfs = new HashMap<>();
         for (String filePath : Config.surfFiles) {
             ArrayList<Polygon> polygons = this.parser.parsSurfFile(Path.of(rootDir.toString(), filePath));
             if (!polygons.isEmpty()) {
-                listSurfs.addAll(polygons);
+                surfs.put(filePath, polygons);
+            }
+        }
+    }
+
+    protected void loadGridSchema(Path rootDir) throws IOException {
+        gridSchema = this.parser.parsGridSchema(Path.of(rootDir.toString(), "cells.txt"));
+    }
+
+    protected void excludeOutSurfGridCells() {
+        List<int[]> surfBorders = new ArrayList<>();
+        for (List<Polygon> surf: surfs.values()) {
+            int[] borders = new int[] {Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE};
+            for (Polygon polygon : surf) {
+                float[] polygonBorders = polygon.getBorderPoints();
+
+                if (polygonBorders[0] * 1000 < borders[0]) {
+                    borders[0] = (int) (polygonBorders[0] * 1000);
+                }
+                if (polygonBorders[1] * 1000 < borders[1]) {
+                    borders[1] = (int) (polygonBorders[1] * 1000);
+                }
+                if (polygonBorders[2] * 1000 > borders[2]) {
+                    borders[2] = (int) (polygonBorders[2] * 1000);
+                }
+                if (polygonBorders[3] * 1000 > borders[3]) {
+                    borders[3] = (int) (polygonBorders[3] * 1000);
+                }
+            }
+            surfBorders.add(borders);
+        }
+
+        for (Integer yLo : gridSchema.keySet()) {
+            boolean flgYOutside = true;
+            for (int[] borders : surfBorders) {
+                if (yLo >= borders[1] && yLo <= borders[3]) {
+                    flgYOutside = false;
+                    break;
+                }
+            }
+            if (flgYOutside) {
+                continue;
+            }
+
+            for (Integer xLo : gridSchema.get(yLo).keySet()) {
+                for (int[] borders : surfBorders) {
+                    if (xLo >= borders[0] && xLo <= borders[2]) {
+                        if (!inSurfSchema.containsKey(xLo)) {
+                            inSurfSchema.put(xLo, new HashMap<>());
+                        }
+                        inSurfSchema.get(xLo).put(yLo, gridSchema.get(yLo).get(xLo));
+                    }
+                }
             }
         }
     }

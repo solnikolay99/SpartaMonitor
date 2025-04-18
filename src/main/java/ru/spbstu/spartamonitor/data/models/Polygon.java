@@ -33,4 +33,22 @@ public class Polygon {
     public List<Line2D> getLines() {
         return lines;
     }
+
+    public float[] getBorderPoints() {
+        float[] borderPoints = new float[] {Float.MAX_VALUE, Float.MAX_VALUE, Float.MIN_VALUE, Float.MIN_VALUE};
+        for (Point point : points) {
+            if (point.x < borderPoints[0]) {
+                borderPoints[0] = point.x;
+            } else if (point.x > borderPoints[2]) {
+                borderPoints[2] = point.x;
+            }
+
+            if (point.y < borderPoints[1]) {
+                borderPoints[1] = point.y;
+            } else if (point.y > borderPoints[3]) {
+                borderPoints[3] = point.y;
+            }
+        }
+        return borderPoints;
+    }
 }

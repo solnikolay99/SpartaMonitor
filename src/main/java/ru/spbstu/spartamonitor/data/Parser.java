@@ -251,4 +251,39 @@ public class Parser {
 
         return polygons;
     }
+
+    /**
+     * Pars grid schema from cells.txt file to Map<int, Map<int, int>>.
+     * key of root Map - ylo coord of cell * 1000
+     * key of child Map - xlo coord of cell * 1000
+     * value of child Map - id of cell
+     *
+     * @param fileName - full path to file
+     * @return - Map with keys 'y : x - id'
+     */
+    public HashMap<Integer, HashMap<Integer, Integer>> parsGridSchema(Path fileName) throws IOException {
+        HashMap<Integer, HashMap<Integer, Integer>> gridSchema = new HashMap<>();
+
+        List<String> fileLines = Files.readAllLines(fileName);
+
+        List<String> headers = Arrays.stream(fileLines.get(8).replace("ITEM: CELLS ", "").strip().split(" ")).toList();
+        int idIndex = headers.indexOf("id");
+        int xLoIndex = headers.indexOf("xlo");
+        int yLoIndex = headers.indexOf("ylo");
+        int distSurfIndex = headers.indexOf("c_cellsDistsurf[*]");
+
+        for (int i = 9; i < fileLines.size(); i++) {
+            String[] params = fileLines.get(i).split(" ");
+            if (Float.parseFloat(params[distSurfIndex]) != 0f) {
+                int yLo = (int) (Float.parseFloat(params[yLoIndex]) * 1000);
+                int xLo = (int) (Float.parseFloat(params[xLoIndex]) * 1000);
+                if (!gridSchema.containsKey(yLo)) {
+                    gridSchema.put(yLo, new HashMap<>());
+                }
+                gridSchema.get(yLo).put(xLo, Integer.parseInt(params[idIndex]));
+            }
+        }
+
+        return gridSchema;
+    }
 }

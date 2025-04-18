@@ -4,6 +4,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.paint.Color;
@@ -32,6 +33,7 @@ public class MainCanvas extends Canvas {
     public MainCanvas() {
         this.setOnScroll(this::onZooming);
         this.setOnMousePressed(canvasOnMousePressedEventHandler);
+        this.setOnMouseReleased(canvasOnMouseReleasedEventHandler);
         this.setOnMouseDragged(canvasOnMouseDraggedEventHandler);
     }
 
@@ -44,7 +46,7 @@ public class MainCanvas extends Canvas {
 
         drawMask(frameGenerator);
 
-        colorizePoints(gc, frame, colorizeType);
+        colorizePoints(frame, colorizeType);
 
         drawTitle(title);
     }
@@ -87,17 +89,19 @@ public class MainCanvas extends Canvas {
         gc.setFill(Color.AZURE);
         gc.fillRect(shiftBoxX, shiftBoxY, mainBoxX, mainBoxY);
 
-        for (Polygon surf : frameGenerator.getListSurfs()) {
-            List<Double> xs = new ArrayList<>();
-            List<Double> ys = new ArrayList<>();
-            for (Point surfPoint : surf.getPoints()) {
-                xs.add((double) (shiftBoxX + surfPoint.x * multiplayer));
-                ys.add((double) (shiftBoxY + surfPoint.y * multiplayer));
+        for (List<Polygon> surfs : frameGenerator.getSurfs().values()) {
+            for (Polygon surf : surfs) {
+                List<Double> xs = new ArrayList<>();
+                List<Double> ys = new ArrayList<>();
+                for (Point surfPoint : surf.getPoints()) {
+                    xs.add((double) (shiftBoxX + surfPoint.x * multiplayer));
+                    ys.add((double) (shiftBoxY + surfPoint.y * multiplayer));
+                }
+                gc.setFill(Color.GRAY);
+                gc.fillPolygon(xs.stream().mapToDouble(Double::doubleValue).toArray(),
+                        ys.stream().mapToDouble(Double::doubleValue).toArray(),
+                        xs.size());
             }
-            gc.setFill(Color.GRAY);
-            gc.fillPolygon(xs.stream().mapToDouble(Double::doubleValue).toArray(),
-                    ys.stream().mapToDouble(Double::doubleValue).toArray(),
-                    xs.size());
         }
 
         drawAxes();
@@ -113,7 +117,9 @@ public class MainCanvas extends Canvas {
         return colorSchema.get((int) value * (colorSchema.size() - 1) / (colorizeType.maxValue - colorizeType.minValue));
     }
 
-    protected void colorizePoints(GraphicsContext gc, FrameGenerator.Frame frame, ColorizeType colorizeType) {
+    protected void colorizePoints(FrameGenerator.Frame frame, ColorizeType colorizeType) {
+        GraphicsContext gc = this.getGraphicsContext2D();
+
         float xLoBorder = -shiftBoxX * monitorCellSize / zoom;
         float xHiBorder = (maxBoxX - shiftBoxX) * monitorCellSize / zoom;
         float yLoBorder = -shiftBoxY * monitorCellSize / zoom;
@@ -189,17 +195,48 @@ public class MainCanvas extends Canvas {
     }
 
     EventHandler<MouseEvent> canvasOnMousePressedEventHandler = mouseEvent -> {
-        animatedCanvasX = mouseEvent.getSceneX();
-        animatedCanvasY = mouseEvent.getSceneY();
-        originalShiftX = shiftBoxX;
-        originalShiftY = shiftBoxY;
+        if (mouseEvent.getButton() == MouseButton.PRIMARY) {
+            animatedCanvasX = mouseEvent.getSceneX();
+            animatedCanvasY = mouseEvent.getSceneY();
+            originalShiftX = shiftBoxX;
+            originalShiftY = shiftBoxY;
+        } else if (mouseEvent.getButton() == MouseButton.SECONDARY) {
+            showCoordsForRightButton(mouseEvent);
+        }
+    };
+
+    EventHandler<MouseEvent> canvasOnMouseReleasedEventHandler = mouseEvent -> {
+        if (mouseEvent.getButton() == MouseButton.SECONDARY) {
+            EventBusFactory.getEventBus().post(new DrawEvent(0));
+        }
     };
 
     EventHandler<MouseEvent> canvasOnMouseDraggedEventHandler = mouseEvent -> {
-        double offsetX = mouseEvent.getSceneX() - animatedCanvasX;
-        double offsetY = mouseEvent.getSceneY() - animatedCanvasY;
-        shiftBoxX = originalShiftX + (int) offsetX;
-        shiftBoxY = originalShiftY + (int) offsetY;
-        EventBusFactory.getEventBus().post(new DrawEvent(0));
+        if (mouseEvent.getButton() == MouseButton.PRIMARY) {
+            double offsetX = mouseEvent.getSceneX() - animatedCanvasX;
+            double offsetY = mouseEvent.getSceneY() - animatedCanvasY;
+            shiftBoxX = originalShiftX + (int) offsetX;
+            shiftBoxY = originalShiftY + (int) offsetY;
+            EventBusFactory.getEventBus().post(new DrawEvent(0));
+        }
     };
+
+    private void showCoordsForRightButton(MouseEvent mouseEvent) {
+        double canvasX = mouseEvent.getX();
+
+        int surfX = (int) ((canvasX - shiftBoxX) / multiplayer * 1000) / 5 * 5;
+        int countCells = 0;
+        if (FrameGenerator.inSurfSchema.containsKey(surfX)) {
+            countCells = FrameGenerator.inSurfSchema.get(surfX).keySet().size();
+        }
+        String text = String.format("%d = %d", surfX, countCells);
+
+        GraphicsContext gc = this.getGraphicsContext2D();
+
+        gc.setFill(Color.LIGHTGRAY);
+        gc.fillRect(canvasX, 0, 1, this.getHeight());
+        gc.fillRect(canvasX - 50, 0, 100, 22);
+        gc.setFill(Color.WHITE);
+        gc.fillText(text, canvasX - ((float) text.length() * 5 / 2), 15);
+    }
 }
