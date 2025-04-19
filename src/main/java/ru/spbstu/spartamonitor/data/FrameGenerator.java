@@ -27,7 +27,7 @@ public class FrameGenerator implements Runnable {
     public List<Timeframe> timeframes = Collections.synchronizedList(new ArrayList<>());
     private static int curFrame = 0;
     public HashMap<String, List<Polygon>> surfs = new HashMap<>();
-    public static HashMap<Integer, HashMap<Integer, Parser.GridCell>> gridSchema = new HashMap<>();
+    public static HashMap<Integer, Parser.GridCell> gridSchema = new HashMap<>();
     public static HashMap<Integer, HashMap<Integer, Parser.GridCell>> inSurfSchema = new HashMap<>();
 
     private static final FrameGenerator frameGenerator = new FrameGenerator();
@@ -137,24 +137,24 @@ public class FrameGenerator implements Runnable {
     }
 
     protected void excludeOutSurfGridCells() {
-        List<int[]> surfBorders = new ArrayList<>();
+        List<float[]> surfBorders = new ArrayList<>();
         List<java.awt.Polygon> excludedAreas = new ArrayList<>();
         for (List<Polygon> surf : surfs.values()) {
-            int[] borders = new int[]{Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE};
+            float[] borders = new float[]{Float.MAX_VALUE, Float.MAX_VALUE, Float.MIN_VALUE, Float.MIN_VALUE};
             for (Polygon polygon : surf) {
                 float[] polygonBorders = polygon.getBorderPoints();
 
-                if (polygonBorders[0] * 1000 < borders[0]) {
-                    borders[0] = (int) (polygonBorders[0] * 1000);
+                if (polygonBorders[0] < borders[0]) {
+                    borders[0] = polygonBorders[0];
                 }
-                if (polygonBorders[1] * 1000 < borders[1]) {
-                    borders[1] = (int) (polygonBorders[1] * 1000);
+                if (polygonBorders[1] < borders[1]) {
+                    borders[1] = polygonBorders[1];
                 }
-                if (polygonBorders[2] * 1000 > borders[2]) {
-                    borders[2] = (int) (polygonBorders[2] * 1000);
+                if (polygonBorders[2] > borders[2]) {
+                    borders[2] = polygonBorders[2];
                 }
-                if (polygonBorders[3] * 1000 > borders[3]) {
-                    borders[3] = (int) (polygonBorders[3] * 1000);
+                if (polygonBorders[3] > borders[3]) {
+                    borders[3] = polygonBorders[3];
                 }
 
                 java.awt.Polygon excludedArea = new java.awt.Polygon();
@@ -166,46 +166,35 @@ public class FrameGenerator implements Runnable {
             surfBorders.add(borders);
         }
 
-        for (Integer xLo : gridSchema.keySet()) {
-            boolean flgXOutside = true;
-            for (int[] borders : surfBorders) {
-                if (xLo >= borders[0] && xLo <= borders[2]) {
-                    flgXOutside = false;
-                    break;
-                }
-            }
-            if (flgXOutside) {
-                continue;
-            }
+        for (Integer cellId : gridSchema.keySet()) {
+            Parser.GridCell gridCell = gridSchema.get(cellId);
+            for (float[] borders : surfBorders) {
+                if (gridCell.xLo >= borders[0] && gridCell.xLo <= borders[2]
+                        && gridCell.yLo >= borders[1] && gridCell.yLo <= borders[3]
+                        && gridCell.xHi >= borders[0] && gridCell.xHi <= borders[2]
+                        && gridCell.yHi >= borders[1] && gridCell.yHi <= borders[3]) {
 
-            for (Integer yLo : gridSchema.get(xLo).keySet()) {
-                Parser.GridCell gridCell = gridSchema.get(xLo).get(yLo);
-                for (int[] borders : surfBorders) {
-                    if (gridCell.xLo >= borders[0] && gridCell.xLo <= borders[2] && gridCell.yLo >= borders[1] && gridCell.yLo <= borders[3]
-                            && gridCell.xHi >= borders[0] && gridCell.xHi <= borders[2] && gridCell.yHi >= borders[1] && gridCell.yHi <= borders[3]) {
+                    Rectangle gridPolygon = new Rectangle((int) (gridCell.xLo * 1000),
+                            (int) (gridCell.yLo * 1000),
+                            (int) ((gridCell.xHi - gridCell.xLo) * 1000),
+                            (int) ((gridCell.yHi - gridCell.yLo) * 1000));
 
-                        Rectangle gridPolygon = new Rectangle(gridCell.xLo,
-                                gridCell.yLo,
-                                gridCell.xHi - gridCell.xLo,
-                                gridCell.yHi - gridCell.yLo);
-
-                        boolean flgGridPolygonInside = false;
-                        for (java.awt.Polygon excludedArea : excludedAreas) {
-                            if (excludedArea.contains(gridPolygon)) {
-                                flgGridPolygonInside = true;
-                                break;
-                            }
+                    boolean flgGridPolygonInside = false;
+                    for (java.awt.Polygon excludedArea : excludedAreas) {
+                        if (excludedArea.contains(gridPolygon)) {
+                            flgGridPolygonInside = true;
+                            break;
                         }
-
-                        if (flgGridPolygonInside) {
-                            continue;
-                        }
-
-                        if (!inSurfSchema.containsKey(xLo)) {
-                            inSurfSchema.put(xLo, new HashMap<>());
-                        }
-                        inSurfSchema.get(xLo).put(yLo, gridSchema.get(xLo).get(yLo));
                     }
+
+                    if (flgGridPolygonInside) {
+                        continue;
+                    }
+
+                    if (!inSurfSchema.containsKey((int) (gridCell.xLo * 1000))) {
+                        inSurfSchema.put((int) (gridCell.xLo * 1000), new HashMap<>());
+                    }
+                    inSurfSchema.get((int) (gridCell.xLo * 1000)).put(cellId, gridSchema.get(cellId));
                 }
             }
         }

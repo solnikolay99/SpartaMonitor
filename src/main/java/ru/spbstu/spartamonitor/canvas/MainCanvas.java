@@ -45,6 +45,7 @@ public class MainCanvas extends Canvas {
     public void drawIteration(FrameGenerator frameGenerator,
                               FrameGenerator.Frame frame,
                               ColorizeType colorizeType,
+                              boolean flgDrawByPointsOrCells,
                               String title) {
         GraphicsContext gc = this.getGraphicsContext2D();
         gc.setImageSmoothing(true);
@@ -52,7 +53,11 @@ public class MainCanvas extends Canvas {
         drawMask(frameGenerator);
 
         curColorizeType = colorizeType;
-        colorizePoints(frame, colorizeType);
+        if (flgDrawByPointsOrCells) {
+            colorizePoints(frame, colorizeType);
+        } else {
+            colorizeCells(frame, colorizeType);
+        }
 
         drawTitle(title);
     }
@@ -159,6 +164,45 @@ public class MainCanvas extends Canvas {
         }
     }
 
+    protected void colorizeCells(FrameGenerator.Frame frame, ColorizeType colorizeType) {
+        GraphicsContext gc = this.getGraphicsContext2D();
+
+        float xLoBorder = -shiftBoxX * monitorCellSize / zoom;
+        float xHiBorder = (maxBoxX - shiftBoxX) * monitorCellSize / zoom;
+        float yLoBorder = -shiftBoxY * monitorCellSize / zoom;
+        float yHiBorder = (maxBoxY - shiftBoxY) * monitorCellSize / zoom;
+
+        for (Integer cellId : frame.timeframe.getGrid().getCells().keySet()) {
+            Parser.GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
+            if (gridCell.xLo < xLoBorder || gridCell.xHi < xLoBorder
+                    || xHiBorder < gridCell.xLo || xHiBorder < gridCell.xHi) {
+                continue;
+            } else if (gridCell.yLo < yLoBorder || gridCell.yHi < yLoBorder
+                    || yHiBorder < gridCell.yLo || yHiBorder < gridCell.yHi) {
+                continue;
+            }
+            try {
+                if (colorizeType == ColorizeType.DENSITY) {
+                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(cellId)[0], colorizeType));
+                } else if (colorizeType == ColorizeType.TEMPERATURE) {
+                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(cellId)[1], colorizeType));
+                } else if (colorizeType == ColorizeType.VELOCITY) {
+                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(cellId)[2], colorizeType));
+                } else if (colorizeType == ColorizeType.SOUND_VELOCITY) {
+                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(cellId)[3], colorizeType));
+                } else if (colorizeType == ColorizeType.MACH) {
+                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(cellId)[4], colorizeType));
+                }
+            } catch (Exception ignore) {
+                gc.setFill(Color.YELLOW);
+            }
+            gc.fillRect(shiftBoxX + gridCell.xLo * multiplayer,
+                    shiftBoxY + gridCell.yLo * multiplayer,
+                    (gridCell.xHi - gridCell.xLo) * multiplayer,
+                    (gridCell.yHi - gridCell.yLo) * multiplayer);
+        }
+    }
+
     public float getZoom() {
         return zoom;
     }
@@ -235,6 +279,7 @@ public class MainCanvas extends Canvas {
         FrameGenerator.Frame frame = FrameGenerator.getFrameGenerator().getFrame(0);
 
         int countCells = 0;
+        int countCellsWithValue = 0;
         float cellSumValue = 0f;
         if (FrameGenerator.inSurfSchema.containsKey(surfX)) {
             HashMap<Integer, Parser.GridCell> cellIds = FrameGenerator.inSurfSchema.get(surfX);
@@ -246,39 +291,45 @@ public class MainCanvas extends Canvas {
                     if (curColorizeType == ColorizeType.DENSITY) {
                         if (frameCells.get(gridCell.cellId)[0] > 0f) {
                             cellSumValue += frameCells.get(gridCell.cellId)[0];
+                            countCellsWithValue++;
                         }
                     } else if (curColorizeType == ColorizeType.TEMPERATURE) {
                         if (frameCells.get(gridCell.cellId)[1] > 0f) {
                             cellSumValue += frameCells.get(gridCell.cellId)[1];
+                            countCellsWithValue++;
                         }
                     } else if (curColorizeType == ColorizeType.VELOCITY) {
                         if (frameCells.get(gridCell.cellId)[2] > 0f) {
                             cellSumValue += frameCells.get(gridCell.cellId)[2];
+                            countCellsWithValue++;
                         }
                     } else if (curColorizeType == ColorizeType.SOUND_VELOCITY) {
                         if (frameCells.get(gridCell.cellId)[3] > 0f) {
                             cellSumValue += frameCells.get(gridCell.cellId)[3];
+                            countCellsWithValue++;
                         }
                     } else if (curColorizeType == ColorizeType.MACH) {
                         if (frameCells.get(gridCell.cellId)[4] < Float.MAX_VALUE) {
                             cellSumValue += frameCells.get(gridCell.cellId)[4];
+                            countCellsWithValue++;
                         }
                     }
                 }
             }
         }
 
-        String text = String.format("%.3f - %.3f см: %.1f %s",
+        String text = String.format("%.3f - %.3f см: %.1f | %.1f %s",
                 (float) surfX / 1000,
                 (float) surfX1 / 1000,
                 cellSumValue / (countCells == 0 ? 1 : countCells),
+                cellSumValue / (countCellsWithValue == 0 ? 1 : countCellsWithValue),
                 curColorizeType.units);
 
         GraphicsContext gc = this.getGraphicsContext2D();
 
         gc.setFill(Color.GRAY);
         gc.fillRect(canvasX, 0, 1, this.getHeight());
-        gc.fillRect(canvasX - 75, 0, 150, 22);
+        gc.fillRect(canvasX - ((float) text.length() * 6 / 2) - 1.5, 0, text.length() * 6 + 3, 22);
         gc.setFill(Color.WHITE);
         gc.fillText(text, canvasX - ((float) text.length() * 5 / 2), 15);
     }

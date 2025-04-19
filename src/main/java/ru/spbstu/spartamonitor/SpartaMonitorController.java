@@ -1,13 +1,13 @@
 package ru.spbstu.spartamonitor;
 
 import javafx.fxml.FXML;
+import javafx.scene.control.*;
 import javafx.scene.control.Button;
-import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleGroup;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import org.controlsfx.control.ToggleSwitch;
 import ru.spbstu.spartamonitor.canvas.DensityChart;
 import ru.spbstu.spartamonitor.canvas.GraduationCanvas;
 import ru.spbstu.spartamonitor.canvas.MainCanvas;
@@ -35,6 +35,7 @@ public class SpartaMonitorController {
     private volatile boolean drawIterationFinished = true;
     private Stage mainStage;
     private ColorizeType colorizeType = ColorizeType.DENSITY;
+    private boolean drawByPoints = true;
 
     @FXML
     protected Button buttonSaveAsPicture;
@@ -61,9 +62,11 @@ public class SpartaMonitorController {
     @FXML
     protected Button buttonDumpFolder;
     @FXML
-    protected ToggleGroup radioColorizeType;
+    public ComboBox<String> selectColorizeType;
     @FXML
     public TextField textCountFrames;
+    @FXML
+    public ToggleSwitch switchDrawPointsOrCells;
 
     public SpartaMonitorController() {
         this.fgThread = new Thread(frameGenerator);
@@ -72,6 +75,8 @@ public class SpartaMonitorController {
 
     public void setMainStage(Stage stage) {
         this.mainStage = stage;
+
+        selectColorizeType.getSelectionModel().select(0);
     }
 
     protected void loadConfig() {
@@ -180,14 +185,20 @@ public class SpartaMonitorController {
 
     @FXML
     protected void onColorizeTypeChange() {
-        switch (((RadioButton) radioColorizeType.getSelectedToggle()).getText()) {
-            case "Давление" -> colorizeType = ColorizeType.DENSITY;
-            case "Температура" -> colorizeType = ColorizeType.TEMPERATURE;
-            case "Скорость" -> colorizeType = ColorizeType.VELOCITY;
-            case "Скорость звука" -> colorizeType = ColorizeType.SOUND_VELOCITY;
-            case "Число Маха" -> colorizeType = ColorizeType.MACH;
+        switch (selectColorizeType.getSelectionModel().getSelectedIndex()) {
+            case 0 -> colorizeType = ColorizeType.DENSITY;
+            case 1 -> colorizeType = ColorizeType.TEMPERATURE;
+            case 2 -> colorizeType = ColorizeType.VELOCITY;
+            case 3 -> colorizeType = ColorizeType.SOUND_VELOCITY;
+            case 4 -> colorizeType = ColorizeType.MACH;
         }
         graduationCanvas.colorize(colorizeType);
+        EventBusFactory.getEventBus().post(new DrawEvent(0));
+    }
+
+    @FXML
+    protected void onDrawTypeChange() {
+        drawByPoints = !switchDrawPointsOrCells.isSelected();
         EventBusFactory.getEventBus().post(new DrawEvent(0));
     }
 
@@ -205,7 +216,7 @@ public class SpartaMonitorController {
             Logger.startTimer("Draw iteration");
 
             String title = String.format("%.0f мкс", (frame.frameNumber) * (tStep / 1e-6 * 100));
-            animationCanvas.drawIteration(this.frameGenerator, frame, colorizeType, title);
+            animationCanvas.drawIteration(this.frameGenerator, frame, colorizeType, drawByPoints, title);
             densityChart.drawIteration(frame);
 
             Toolkit.getDefaultToolkit().sync();
