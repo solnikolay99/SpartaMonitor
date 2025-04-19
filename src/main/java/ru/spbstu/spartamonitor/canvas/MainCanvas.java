@@ -10,13 +10,16 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.paint.Color;
 import ru.spbstu.spartamonitor.colorize.ColorizeType;
 import ru.spbstu.spartamonitor.data.FrameGenerator;
+import ru.spbstu.spartamonitor.data.Parser;
 import ru.spbstu.spartamonitor.data.models.Point;
 import ru.spbstu.spartamonitor.data.models.Polygon;
 import ru.spbstu.spartamonitor.eventbus.EventBusFactory;
 import ru.spbstu.spartamonitor.events.DrawEvent;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static ru.spbstu.spartamonitor.colorize.ColorSchema.colorSchema;
 import static ru.spbstu.spartamonitor.config.Config.*;
@@ -29,6 +32,8 @@ public class MainCanvas extends Canvas {
     private double animatedCanvasY = 0;
     private int originalShiftX = 0;
     private int originalShiftY = 0;
+
+    private ColorizeType curColorizeType = ColorizeType.DENSITY;
 
     public MainCanvas() {
         this.setOnScroll(this::onZooming);
@@ -46,6 +51,7 @@ public class MainCanvas extends Canvas {
 
         drawMask(frameGenerator);
 
+        curColorizeType = colorizeType;
         colorizePoints(frame, colorizeType);
 
         drawTitle(title);
@@ -225,17 +231,54 @@ public class MainCanvas extends Canvas {
         double canvasX = mouseEvent.getX();
 
         int surfX = (int) ((canvasX - shiftBoxX) / multiplayer * 1000) / 5 * 5;
+        int surfX1 = (int) ((canvasX - shiftBoxX) / multiplayer * 1000) / 5 * 5 + 5;
+        FrameGenerator.Frame frame = FrameGenerator.getFrameGenerator().getFrame(0);
+
         int countCells = 0;
+        float cellSumValue = 0f;
         if (FrameGenerator.inSurfSchema.containsKey(surfX)) {
-            countCells = FrameGenerator.inSurfSchema.get(surfX).keySet().size();
+            HashMap<Integer, Parser.GridCell> cellIds = FrameGenerator.inSurfSchema.get(surfX);
+            Map<Integer, Float[]> frameCells = frame.timeframe.getGrid().getCells();
+
+            countCells = cellIds.size();
+            for (Parser.GridCell gridCell : cellIds.values()) {
+                if (frameCells.containsKey(gridCell.cellId)) {
+                    if (curColorizeType == ColorizeType.DENSITY) {
+                        if (frameCells.get(gridCell.cellId)[0] > 0f) {
+                            cellSumValue += frameCells.get(gridCell.cellId)[0];
+                        }
+                    } else if (curColorizeType == ColorizeType.TEMPERATURE) {
+                        if (frameCells.get(gridCell.cellId)[1] > 0f) {
+                            cellSumValue += frameCells.get(gridCell.cellId)[1];
+                        }
+                    } else if (curColorizeType == ColorizeType.VELOCITY) {
+                        if (frameCells.get(gridCell.cellId)[2] > 0f) {
+                            cellSumValue += frameCells.get(gridCell.cellId)[2];
+                        }
+                    } else if (curColorizeType == ColorizeType.SOUND_VELOCITY) {
+                        if (frameCells.get(gridCell.cellId)[3] > 0f) {
+                            cellSumValue += frameCells.get(gridCell.cellId)[3];
+                        }
+                    } else if (curColorizeType == ColorizeType.MACH) {
+                        if (frameCells.get(gridCell.cellId)[4] < Float.MAX_VALUE) {
+                            cellSumValue += frameCells.get(gridCell.cellId)[4];
+                        }
+                    }
+                }
+            }
         }
-        String text = String.format("%d = %d", surfX, countCells);
+
+        String text = String.format("%.3f - %.3f см: %.1f %s",
+                (float) surfX / 1000,
+                (float) surfX1 / 1000,
+                cellSumValue / (countCells == 0 ? 1 : countCells),
+                curColorizeType.units);
 
         GraphicsContext gc = this.getGraphicsContext2D();
 
-        gc.setFill(Color.LIGHTGRAY);
+        gc.setFill(Color.GRAY);
         gc.fillRect(canvasX, 0, 1, this.getHeight());
-        gc.fillRect(canvasX - 50, 0, 100, 22);
+        gc.fillRect(canvasX - 75, 0, 150, 22);
         gc.setFill(Color.WHITE);
         gc.fillText(text, canvasX - ((float) text.length() * 5 / 2), 15);
     }

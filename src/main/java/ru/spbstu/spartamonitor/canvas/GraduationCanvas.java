@@ -39,6 +39,6 @@ public class GraduationCanvas extends Canvas {
             gc.fillRect(i * smallTextStep, 34, 1, 6);
         }
 
-        gc.fillText(graduation.label, (countTextSteps * textStep) / 2 - 40, 10);
+        gc.fillText(String.format("%s, %s", graduation.label, graduation.units), (countTextSteps * textStep) / 2 - 40, 10);
     }
 }

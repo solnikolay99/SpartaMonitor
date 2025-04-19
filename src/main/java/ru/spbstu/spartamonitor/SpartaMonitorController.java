@@ -30,7 +30,7 @@ import static ru.spbstu.spartamonitor.config.Config.tStep;
 
 public class SpartaMonitorController {
 
-    public final FrameGenerator frameGenerator = new FrameGenerator();
+    public final FrameGenerator frameGenerator = FrameGenerator.getFrameGenerator();
     private final Thread fgThread;
     private volatile boolean drawIterationFinished = true;
     private Stage mainStage;

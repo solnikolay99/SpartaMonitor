@@ -5,6 +5,7 @@ import ru.spbstu.spartamonitor.data.models.Polygon;
 import ru.spbstu.spartamonitor.data.models.Timeframe;
 import ru.spbstu.spartamonitor.logger.Logger;
 
+import java.awt.*;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -24,12 +25,15 @@ public class FrameGenerator implements Runnable {
     private volatile boolean flgPreload = false;
 
     public List<Timeframe> timeframes = Collections.synchronizedList(new ArrayList<>());
-    private int curFrame = 0;
+    private static int curFrame = 0;
     public HashMap<String, List<Polygon>> surfs = new HashMap<>();
-    public static HashMap<Integer, HashMap<Integer, Integer>> gridSchema = new HashMap<>();
-    public static HashMap<Integer, HashMap<Integer, Integer>> inSurfSchema = new HashMap<>();
+    public static HashMap<Integer, HashMap<Integer, Parser.GridCell>> gridSchema = new HashMap<>();
+    public static HashMap<Integer, HashMap<Integer, Parser.GridCell>> inSurfSchema = new HashMap<>();
 
-    public FrameGenerator() {
+    private static final FrameGenerator frameGenerator = new FrameGenerator();
+
+    public static FrameGenerator getFrameGenerator() {
+        return frameGenerator;
     }
 
     public void setDumpDir(String dumpDir) throws IOException {
@@ -43,7 +47,7 @@ public class FrameGenerator implements Runnable {
                 Logger.startTimer("Get all timeframe data");
                 try {
                     this.parser.getAllTimeFrames();
-                    this.parser.parsDumps(this.timeframes, 0, 20);
+                    this.parser.parsDumps(this.timeframes, 100, 120);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -91,18 +95,18 @@ public class FrameGenerator implements Runnable {
 
     public Frame getFrame(int countSteps) {
         Frame frame = new Frame();
-        this.curFrame += countSteps;
-        if (this.curFrame >= this.timeframes.size()) {
-            this.curFrame = 0;
-        } else if (this.curFrame < 0) {
-            this.curFrame = this.timeframes.size() - 1;
+        curFrame += countSteps;
+        if (curFrame >= this.timeframes.size()) {
+            curFrame = 0;
+        } else if (curFrame < 0) {
+            curFrame = this.timeframes.size() - 1;
         }
-        if (this.isRunning || this.showOneIteration) {
+        if (this.isRunning || this.showOneIteration || countSteps == 0) {
             synchronized (lock) {
-                frame.timeframe = this.timeframes.get(this.curFrame);
+                frame.timeframe = this.timeframes.get(curFrame);
             }
         }
-        frame.frameNumber = this.curFrame;
+        frame.frameNumber = curFrame;
         return frame;
     }
 
@@ -134,8 +138,9 @@ public class FrameGenerator implements Runnable {
 
     protected void excludeOutSurfGridCells() {
         List<int[]> surfBorders = new ArrayList<>();
-        for (List<Polygon> surf: surfs.values()) {
-            int[] borders = new int[] {Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE};
+        List<java.awt.Polygon> excludedAreas = new ArrayList<>();
+        for (List<Polygon> surf : surfs.values()) {
+            int[] borders = new int[]{Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE};
             for (Polygon polygon : surf) {
                 float[] polygonBorders = polygon.getBorderPoints();
 
@@ -151,29 +156,55 @@ public class FrameGenerator implements Runnable {
                 if (polygonBorders[3] * 1000 > borders[3]) {
                     borders[3] = (int) (polygonBorders[3] * 1000);
                 }
+
+                java.awt.Polygon excludedArea = new java.awt.Polygon();
+                for (ru.spbstu.spartamonitor.data.models.Point point : polygon.getPoints()) {
+                    excludedArea.addPoint((int) (point.x * 1000), (int) (point.y * 1000));
+                }
+                excludedAreas.add(excludedArea);
             }
             surfBorders.add(borders);
         }
 
-        for (Integer yLo : gridSchema.keySet()) {
-            boolean flgYOutside = true;
+        for (Integer xLo : gridSchema.keySet()) {
+            boolean flgXOutside = true;
             for (int[] borders : surfBorders) {
-                if (yLo >= borders[1] && yLo <= borders[3]) {
-                    flgYOutside = false;
+                if (xLo >= borders[0] && xLo <= borders[2]) {
+                    flgXOutside = false;
                     break;
                 }
             }
-            if (flgYOutside) {
+            if (flgXOutside) {
                 continue;
             }
 
-            for (Integer xLo : gridSchema.get(yLo).keySet()) {
+            for (Integer yLo : gridSchema.get(xLo).keySet()) {
+                Parser.GridCell gridCell = gridSchema.get(xLo).get(yLo);
                 for (int[] borders : surfBorders) {
-                    if (xLo >= borders[0] && xLo <= borders[2]) {
+                    if (gridCell.xLo >= borders[0] && gridCell.xLo <= borders[2] && gridCell.yLo >= borders[1] && gridCell.yLo <= borders[3]
+                            && gridCell.xHi >= borders[0] && gridCell.xHi <= borders[2] && gridCell.yHi >= borders[1] && gridCell.yHi <= borders[3]) {
+
+                        Rectangle gridPolygon = new Rectangle(gridCell.xLo,
+                                gridCell.yLo,
+                                gridCell.xHi - gridCell.xLo,
+                                gridCell.yHi - gridCell.yLo);
+
+                        boolean flgGridPolygonInside = false;
+                        for (java.awt.Polygon excludedArea : excludedAreas) {
+                            if (excludedArea.contains(gridPolygon)) {
+                                flgGridPolygonInside = true;
+                                break;
+                            }
+                        }
+
+                        if (flgGridPolygonInside) {
+                            continue;
+                        }
+
                         if (!inSurfSchema.containsKey(xLo)) {
                             inSurfSchema.put(xLo, new HashMap<>());
                         }
-                        inSurfSchema.get(xLo).put(yLo, gridSchema.get(yLo).get(xLo));
+                        inSurfSchema.get(xLo).put(yLo, gridSchema.get(xLo).get(yLo));
                     }
                 }
             }

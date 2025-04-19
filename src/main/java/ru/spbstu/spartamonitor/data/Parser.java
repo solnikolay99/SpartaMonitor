@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -252,17 +253,33 @@ public class Parser {
         return polygons;
     }
 
+    public static class GridCell {
+        public int xLo;
+        public int yLo;
+        public int xHi;
+        public int yHi;
+        public int cellId;
+
+        public GridCell(int cellId, int xLo, int yLo, int xHi, int yHi) {
+            this.cellId = cellId;
+            this.xLo = xLo;
+            this.yLo = yLo;
+            this.xHi = xHi;
+            this.yHi = yHi;
+        }
+    }
+
     /**
      * Pars grid schema from cells.txt file to Map<int, Map<int, int>>.
-     * key of root Map - ylo coord of cell * 1000
-     * key of child Map - xlo coord of cell * 1000
+     * key of root Map - xlo coordinate of cell * 1000
+     * key of child Map - ylo coordinate of cell * 1000
      * value of child Map - id of cell
      *
      * @param fileName - full path to file
      * @return - Map with keys 'y : x - id'
      */
-    public HashMap<Integer, HashMap<Integer, Integer>> parsGridSchema(Path fileName) throws IOException {
-        HashMap<Integer, HashMap<Integer, Integer>> gridSchema = new HashMap<>();
+    public HashMap<Integer, HashMap<Integer, GridCell>> parsGridSchema(Path fileName) throws IOException {
+        HashMap<Integer, HashMap<Integer, GridCell>> gridSchema = new HashMap<>();
 
         List<String> fileLines = Files.readAllLines(fileName);
 
@@ -270,18 +287,28 @@ public class Parser {
         int idIndex = headers.indexOf("id");
         int xLoIndex = headers.indexOf("xlo");
         int yLoIndex = headers.indexOf("ylo");
-        int distSurfIndex = headers.indexOf("c_cellsDistsurf[*]");
+        int xHiIndex = headers.indexOf("xhi");
+        int yHiIndex = headers.indexOf("yhi");
 
         for (int i = 9; i < fileLines.size(); i++) {
             String[] params = fileLines.get(i).split(" ");
-            if (Float.parseFloat(params[distSurfIndex]) != 0f) {
-                int yLo = (int) (Float.parseFloat(params[yLoIndex]) * 1000);
-                int xLo = (int) (Float.parseFloat(params[xLoIndex]) * 1000);
-                if (!gridSchema.containsKey(yLo)) {
-                    gridSchema.put(yLo, new HashMap<>());
-                }
-                gridSchema.get(yLo).put(xLo, Integer.parseInt(params[idIndex]));
+            //if (Float.parseFloat(params[distSurfIndex]) > 0.001f) {
+            int xLo = (int) (Float.parseFloat(params[xLoIndex]) * 1000);
+            int yLo = (int) (Float.parseFloat(params[yLoIndex]) * 1000);
+            int xHi = (int) (Float.parseFloat(params[xHiIndex]) * 1000);
+            int yHi = (int) (Float.parseFloat(params[yHiIndex]) * 1000);
+            if (!gridSchema.containsKey(xLo)) {
+                gridSchema.put(xLo, new HashMap<>());
             }
+            gridSchema.get(xLo).put(yLo,
+                    new GridCell(
+                            Integer.parseInt(params[idIndex]),
+                            xLo,
+                            yLo,
+                            xHi,
+                            yHi
+                    ));
+            //}
         }
 
         return gridSchema;
