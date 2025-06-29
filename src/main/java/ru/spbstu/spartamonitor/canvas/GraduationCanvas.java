@@ -12,8 +12,8 @@ public class GraduationCanvas extends Canvas {
     public void colorize(ColorizeType graduation) {
         GraphicsContext gc = this.getGraphicsContext2D();
         double colorStep = this.getWidth() / colorSchema.size();
-        int countTextSteps = (graduation.maxValue - graduation.minValue) / graduation.stepValue;
-        int countSmallTextSteps = (graduation.maxValue - graduation.minValue) / graduation.smallStepValue;
+        int countTextSteps = (int) ((graduation.maxValue - graduation.minValue) / graduation.stepValue);
+        int countSmallTextSteps = (int) ((graduation.maxValue - graduation.minValue) / graduation.smallStepValue);
         double textStep = colorSchema.size() * colorStep / countTextSteps;
         double smallTextStep = colorSchema.size() * colorStep / countSmallTextSteps;
 
@@ -28,7 +28,12 @@ public class GraduationCanvas extends Canvas {
         gc.fillText(String.valueOf(graduation.minValue), 0, 25);
         gc.fillRect(0, 30, 2, 10);
         for (int i = 1; i < countTextSteps; i++) {
-            String text = String.valueOf(graduation.minValue + graduation.stepValue * i);
+            String text;
+            if (graduation.stepValue > 1e5) {
+                text = String.valueOf(graduation.minValue + graduation.stepValue * i);
+            } else {
+                text = String.format("%.0f", graduation.minValue + graduation.stepValue * i);
+            }
             gc.fillText(text, i * textStep - 7, 25);
             gc.fillRect(i * textStep - 1, 30, 2, 10);
         }

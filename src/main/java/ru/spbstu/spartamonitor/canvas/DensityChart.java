@@ -6,7 +6,10 @@ import javafx.scene.chart.Axis;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.XYChart;
 import ru.spbstu.spartamonitor.calculate.Calculation;
+import ru.spbstu.spartamonitor.config.Config;
 import ru.spbstu.spartamonitor.data.FrameGenerator;
+
+import java.math.BigDecimal;
 
 public class DensityChart extends LineChart<String, Number> {
     public DensityChart(@NamedArg("xAxis") Axis<String> xAxis,
@@ -20,8 +23,11 @@ public class DensityChart extends LineChart<String, Number> {
     }
 
     public void drawIteration(FrameGenerator.Frame frame) {
-        int countPoints = 0;
+        int targetPoints = 0;
+        int totalPoints = 0;
         float targetDiameter = 0f;
+        BigDecimal outTotalPoints = new BigDecimal(0);
+        BigDecimal outTargetPoints = new BigDecimal(0);
 
         if (this.getData().isEmpty()) {
             if (frame.timeframe.getTarget() != null) {
@@ -46,7 +52,7 @@ public class DensityChart extends LineChart<String, Number> {
                 series3.getData().add(new XYChart.Data<>(String.valueOf(diameter.rightBorder / 10), maxY));
                 this.getData().add(series3);
 
-                targetDiameter = (float) diameter.diameter / 8;
+                targetDiameter = (float) diameter.diameter / 10;
             }
         } else {
             if (frame.timeframe != null && frame.timeframe.getTarget() != null) {
@@ -57,7 +63,7 @@ public class DensityChart extends LineChart<String, Number> {
                     XYChart.Data<String, Number> element = this.getData().getFirst().getData().get(i);
                     element.setYValue(frame.timeframe.getTarget()[i]);
                     maxY = Math.max(maxY, frame.timeframe.getTarget()[i]);
-                    countPoints += frame.timeframe.getTarget()[i];
+                    targetPoints += frame.timeframe.getTarget()[i];
                 }
 
                 this.getData().get(1).getData().getFirst().setXValue(String.valueOf(diameter.leftBorder / 10));
@@ -69,7 +75,7 @@ public class DensityChart extends LineChart<String, Number> {
                 this.getData().get(2).getData().get(1).setXValue(String.valueOf(diameter.rightBorder / 10));
                 this.getData().get(2).getData().get(1).setYValue(maxY);
 
-                targetDiameter = (float) diameter.diameter / 8;
+                targetDiameter = (float) diameter.diameter / 10;
             } else {
                 this.getData().get(0).getData().forEach(element -> element.setYValue(0));
                 this.getData().get(1).getData().forEach(element -> element.setYValue(0));
@@ -77,6 +83,17 @@ public class DensityChart extends LineChart<String, Number> {
             }
         }
 
-        this.setTitle(String.format("Плотность частиц: %d%n" + "Диаметр: %.1f мм", countPoints, targetDiameter));
+        if (frame.timeframe != null) {
+            totalPoints = frame.timeframe.getCountPoints();
+            outTotalPoints = new BigDecimal(Config.globalParams.get("fnum")).multiply(BigDecimal.valueOf(totalPoints));
+            outTargetPoints = new BigDecimal(Config.globalParams.get("fnum")).multiply(BigDecimal.valueOf(targetPoints));
+        }
+
+        this.setTitle(String.format("Общее число частиц:%n" +
+                        "%.2e (%d)%n" +
+                        "Плотность частиц на мишени:%n" +
+                        "%.2e (%d)%n" +
+                        "Диаметр: %.1f мм",
+                outTotalPoints, totalPoints, outTargetPoints, targetPoints, targetDiameter));
     }
 }

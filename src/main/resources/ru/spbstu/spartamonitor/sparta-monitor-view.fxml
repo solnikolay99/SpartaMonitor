@@ -54,7 +54,7 @@
 
     <HBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
           xmlns:fx="http://javafx.com/fxml/1">
-        <TextField fx:id="textDumpFolder" text="D:\dumps"/>
+        <TextField fx:id="textDumpFolder" text="D:\dumps_capilary_avg"/>
         <Button fx:id="buttonDumpFolder" mnemonicParsing="false" onAction="#onButtonDumpFolderClick"
                 text="Папка с дампом"/>
         <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
@@ -79,10 +79,17 @@
                     <String fx:value="Скорость"/>
                     <String fx:value="Скорость звука"/>
                     <String fx:value="Число Маха"/>
+                    <String fx:value="Bind to procs"/>
+                    <String fx:value="N count"/>
+                    <String fx:value="Nrho count CGS"/>
+                    <String fx:value="Nrho count SI"/>
+                    <String fx:value="Разница давлений"/>
                 </FXCollections>
             </items>
         </ComboBox>
         <ToggleSwitch fx:id="switchDrawPointsOrCells" onMouseClicked="#onDrawTypeChange"
                       text="Отрисовывать по точкам / ячейкам"/>
+        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
+        <Button fx:id="buttonDumpDulov" onAction="#onDumpDulovButtonClick" text="Дулов дамп"/>
     </HBox>
 </VBox>

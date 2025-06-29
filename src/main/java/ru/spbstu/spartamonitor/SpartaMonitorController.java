@@ -67,6 +67,8 @@ public class SpartaMonitorController {
     public TextField textCountFrames;
     @FXML
     public ToggleSwitch switchDrawPointsOrCells;
+    @FXML
+    public Button buttonDumpDulov;
 
     public SpartaMonitorController() {
         this.fgThread = new Thread(frameGenerator);
@@ -77,6 +79,11 @@ public class SpartaMonitorController {
         this.mainStage = stage;
 
         selectColorizeType.getSelectionModel().select(0);
+        if (!Config.parsPoints) {
+            drawByPoints = Config.parsPoints;
+            switchDrawPointsOrCells.setSelected(true);
+            switchDrawPointsOrCells.setDisable(true);
+        }
     }
 
     protected void loadConfig() {
@@ -88,7 +95,7 @@ public class SpartaMonitorController {
         loadConfig();
 
         frameGenerator.setDumpDir(this.textDumpFolder.getText());
-        frameGenerator.loadInFile(Path.of(this.textDumpFolder.getText(), "in.step"));
+        frameGenerator.loadInFile(Path.of(this.textDumpFolder.getText()));
 
         animationCanvas.drawMask(frameGenerator);
         graduationCanvas.colorize(ColorizeType.DENSITY);
@@ -191,6 +198,11 @@ public class SpartaMonitorController {
             case 2 -> colorizeType = ColorizeType.VELOCITY;
             case 3 -> colorizeType = ColorizeType.SOUND_VELOCITY;
             case 4 -> colorizeType = ColorizeType.MACH;
+            case 5 -> colorizeType = ColorizeType.BIND;
+            case 6 -> colorizeType = ColorizeType.N_COUNT;
+            case 7 -> colorizeType = ColorizeType.NRHO_CGS;
+            case 8 -> colorizeType = ColorizeType.NRHO_SI;
+            case 9 -> colorizeType = ColorizeType.DENSITY_DIF;
         }
         graduationCanvas.colorize(colorizeType);
         EventBusFactory.getEventBus().post(new DrawEvent(0));
@@ -200,6 +212,11 @@ public class SpartaMonitorController {
     protected void onDrawTypeChange() {
         drawByPoints = !switchDrawPointsOrCells.isSelected();
         EventBusFactory.getEventBus().post(new DrawEvent(0));
+    }
+
+    @FXML
+    protected void onDumpDulovButtonClick() throws IOException {
+        frameGenerator.saveDulovsData(Path.of(this.textDumpFolder.getText()));
     }
 
     public void drawIteration(int playDirection) {

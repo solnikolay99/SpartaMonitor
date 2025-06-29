@@ -119,13 +119,38 @@ public class MainCanvas extends Canvas {
         drawZoom();
     }
 
-    protected Color getColorForType(float value, ColorizeType colorizeType) {
-        if (value > colorizeType.maxValue) {
+    protected Float getDiffByDulov(FrameGenerator.Frame frame, int cellId) {
+        if (FrameGenerator.dulovsData.containsKey(cellId)) {
+            float origCellValue = frame.timeframe.getGrid().getCells().get(cellId)[0];
+            float dulovsValue = FrameGenerator.dulovsData.get(cellId);
+            return Math.abs(origCellValue / dulovsValue * 100);
+        }
+        return null;
+    }
+
+    protected Color getColorForType(FrameGenerator.Frame frame, int cellId, ColorizeType colorizeType) {
+        assert colorizeType != null;
+
+        Float value = switch (colorizeType) {
+            case DENSITY -> frame.timeframe.getGrid().getCells().get(cellId)[0];
+            case TEMPERATURE -> frame.timeframe.getGrid().getCells().get(cellId)[1];
+            case VELOCITY -> frame.timeframe.getGrid().getCells().get(cellId)[2];
+            case SOUND_VELOCITY -> frame.timeframe.getGrid().getCells().get(cellId)[3];
+            case MACH -> frame.timeframe.getGrid().getCells().get(cellId)[4];
+            case BIND -> (float) frame.timeframe.getGrid().getProcs().get(cellId);
+            case N_COUNT -> frame.timeframe.getGrid().getCells().get(cellId)[5];
+            case NRHO_CGS, NRHO_SI -> frame.timeframe.getGrid().getCells().get(cellId)[6];
+            case DENSITY_DIF -> getDiffByDulov(frame, cellId);
+        };
+
+        if (value == null) {
+            return null;
+        } else if (value > colorizeType.maxValue) {
             return colorSchema.getLast();
         } else if (value < colorizeType.minValue) {
             return colorSchema.getFirst();
         }
-        return colorSchema.get((int) value * (colorSchema.size() - 1) / (colorizeType.maxValue - colorizeType.minValue));
+        return colorSchema.get((int) (value * (colorSchema.size() - 1) / (colorizeType.maxValue - colorizeType.minValue)));
     }
 
     protected void colorizePoints(FrameGenerator.Frame frame, ColorizeType colorizeType) {
@@ -142,25 +167,21 @@ public class MainCanvas extends Canvas {
             } else if (point[2].floatValue() < yLoBorder || yHiBorder < point[2].floatValue()) {
                 continue;
             }
+            Color color;
             try {
-                int pointId = point[3].intValue();
-                if (!frame.timeframe.getGrid().getCells().containsKey(pointId)) {
-                    gc.setFill(Color.BLACK);
-                } else if (colorizeType == ColorizeType.DENSITY) {
-                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(pointId)[0], colorizeType));
-                } else if (colorizeType == ColorizeType.TEMPERATURE) {
-                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(pointId)[1], colorizeType));
-                } else if (colorizeType == ColorizeType.VELOCITY) {
-                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(pointId)[2], colorizeType));
-                } else if (colorizeType == ColorizeType.SOUND_VELOCITY) {
-                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(pointId)[3], colorizeType));
-                } else if (colorizeType == ColorizeType.MACH) {
-                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(pointId)[4], colorizeType));
+                int cellId = point[3].intValue();
+                if (!frame.timeframe.getGrid().getCells().containsKey(cellId)) {
+                    color = Color.BLACK;
+                } else {
+                    color = getColorForType(frame, cellId, colorizeType);
                 }
             } catch (Exception ignore) {
-                gc.setFill(Color.YELLOW);
+                color = Color.YELLOW;
             }
-            gc.fillOval(shiftBoxX + point[1].floatValue() * multiplayer, shiftBoxY + point[2].floatValue() * multiplayer, 1, 1);
+            if (color != null) {
+                gc.setFill(color);
+                gc.fillOval(shiftBoxX + point[1].floatValue() * multiplayer, shiftBoxY + point[2].floatValue() * multiplayer, 1, 1);
+            }
         }
     }
 
@@ -181,25 +202,14 @@ public class MainCanvas extends Canvas {
                     || yHiBorder < gridCell.yLo || yHiBorder < gridCell.yHi) {
                 continue;
             }
-            try {
-                if (colorizeType == ColorizeType.DENSITY) {
-                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(cellId)[0], colorizeType));
-                } else if (colorizeType == ColorizeType.TEMPERATURE) {
-                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(cellId)[1], colorizeType));
-                } else if (colorizeType == ColorizeType.VELOCITY) {
-                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(cellId)[2], colorizeType));
-                } else if (colorizeType == ColorizeType.SOUND_VELOCITY) {
-                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(cellId)[3], colorizeType));
-                } else if (colorizeType == ColorizeType.MACH) {
-                    gc.setFill(getColorForType(frame.timeframe.getGrid().getCells().get(cellId)[4], colorizeType));
-                }
-            } catch (Exception ignore) {
-                gc.setFill(Color.YELLOW);
+            Color color = getColorForType(frame, cellId, colorizeType);
+            if (color != null) {
+                gc.setFill(color);
+                gc.fillRect(shiftBoxX + gridCell.xLo * multiplayer,
+                        shiftBoxY + gridCell.yLo * multiplayer,
+                        (gridCell.xHi - gridCell.xLo) * multiplayer,
+                        (gridCell.yHi - gridCell.yLo) * multiplayer);
             }
-            gc.fillRect(shiftBoxX + gridCell.xLo * multiplayer,
-                    shiftBoxY + gridCell.yLo * multiplayer,
-                    (gridCell.xHi - gridCell.xLo) * multiplayer,
-                    (gridCell.yHi - gridCell.yLo) * multiplayer);
         }
     }
 
@@ -273,17 +283,20 @@ public class MainCanvas extends Canvas {
 
     private void showCoordsForRightButton(MouseEvent mouseEvent) {
         double canvasX = mouseEvent.getX();
+        double canvasY = mouseEvent.getY();
 
         int surfX = (int) ((canvasX - shiftBoxX) / multiplayer * 1000) / 5 * 5;
         int surfX1 = (int) ((canvasX - shiftBoxX) / multiplayer * 1000) / 5 * 5 + 5;
+        float surfY = (float) ((canvasY - shiftBoxY) / multiplayer * 1000) / 5 * 5 / 1000;
         FrameGenerator.Frame frame = FrameGenerator.getFrameGenerator().getFrame(0);
 
         int countCells = 0;
         int countCellsWithValue = 0;
+        float cellValue = 0f;
         float cellSumValue = 0f;
         if (FrameGenerator.inSurfSchema.containsKey(surfX)) {
             HashMap<Integer, Parser.GridCell> cellIds = FrameGenerator.inSurfSchema.get(surfX);
-            Map<Integer, Float[]> frameCells = frame.timeframe.getGrid().getCells();
+            Map<Integer, float[]> frameCells = frame.timeframe.getGrid().getCells();
 
             countCells = cellIds.size();
             for (Parser.GridCell gridCell : cellIds.values()) {
@@ -292,37 +305,80 @@ public class MainCanvas extends Canvas {
                         if (frameCells.get(gridCell.cellId)[0] > 0f) {
                             cellSumValue += frameCells.get(gridCell.cellId)[0];
                             countCellsWithValue++;
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells.get(gridCell.cellId)[0];
+                            }
                         }
                     } else if (curColorizeType == ColorizeType.TEMPERATURE) {
                         if (frameCells.get(gridCell.cellId)[1] > 0f) {
                             cellSumValue += frameCells.get(gridCell.cellId)[1];
                             countCellsWithValue++;
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells.get(gridCell.cellId)[1];
+                            }
                         }
                     } else if (curColorizeType == ColorizeType.VELOCITY) {
                         if (frameCells.get(gridCell.cellId)[2] > 0f) {
                             cellSumValue += frameCells.get(gridCell.cellId)[2];
                             countCellsWithValue++;
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells.get(gridCell.cellId)[2];
+                            }
                         }
                     } else if (curColorizeType == ColorizeType.SOUND_VELOCITY) {
                         if (frameCells.get(gridCell.cellId)[3] > 0f) {
                             cellSumValue += frameCells.get(gridCell.cellId)[3];
                             countCellsWithValue++;
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells.get(gridCell.cellId)[3];
+                            }
                         }
                     } else if (curColorizeType == ColorizeType.MACH) {
                         if (frameCells.get(gridCell.cellId)[4] < Float.MAX_VALUE) {
                             cellSumValue += frameCells.get(gridCell.cellId)[4];
                             countCellsWithValue++;
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells.get(gridCell.cellId)[4];
+                            }
+                        }
+                    } else if (curColorizeType == ColorizeType.N_COUNT) {
+                        if (frameCells.get(gridCell.cellId)[5] < Float.MAX_VALUE) {
+                            cellSumValue += frameCells.get(gridCell.cellId)[5];
+                            countCellsWithValue++;
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells.get(gridCell.cellId)[5];
+                            }
+                        }
+                    } else if (curColorizeType == ColorizeType.NRHO_CGS || curColorizeType == ColorizeType.NRHO_SI) {
+                        if (frameCells.get(gridCell.cellId)[6] < Float.MAX_VALUE) {
+                            cellSumValue += frameCells.get(gridCell.cellId)[6];
+                            countCellsWithValue++;
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells.get(gridCell.cellId)[6];
+                            }
                         }
                     }
                 }
             }
         }
 
-        String text = String.format("%.3f - %.3f см: %.1f | %.1f %s",
+        countCells = countCells == 0 ? 1 : countCells;
+        countCellsWithValue = countCellsWithValue == 0 ? 1 : countCellsWithValue;
+        String formattedCellValue = cellValue > 100000F ?
+                String.format("%.2e", cellValue) :
+                String.format("%.1f", cellValue);
+        String formattedCellSumValue = (cellSumValue / countCells) > 100000F ?
+                String.format("%.2e", cellSumValue / countCells) :
+                String.format("%.1f", cellSumValue / countCells);
+        String formattedPerCellSumValue = (cellSumValue / countCellsWithValue) > 100000F ?
+                String.format("%.2e", cellSumValue / countCellsWithValue) :
+                String.format("%.1f", cellSumValue / countCellsWithValue);
+        String text = String.format("%.3f - %.3f см: %s | %s | %s %s",
                 (float) surfX / 1000,
                 (float) surfX1 / 1000,
-                cellSumValue / (countCells == 0 ? 1 : countCells),
-                cellSumValue / (countCellsWithValue == 0 ? 1 : countCellsWithValue),
+                formattedCellValue,
+                formattedCellSumValue,
+                formattedPerCellSumValue,
                 curColorizeType.units);
 
         GraphicsContext gc = this.getGraphicsContext2D();

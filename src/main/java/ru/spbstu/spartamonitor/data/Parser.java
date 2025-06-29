@@ -22,8 +22,10 @@ public class Parser {
 
     private String dumpDir;
     private List<String> dumpFiles;
+    private static final String inFilePattern = "(.*)(in)(.*)(.step)";
     private static final String dumpFilePattern = "(dump.)([0-9]+)(.txt)";
     private static final String gridFilePattern = "(.*grid.)([0-9]+)(.txt)";
+    private static final String influxFilePattern = "(.*influx_sum.)([0-9]+)(.txt)";
     private static final String targetFilePattern = "(.*target_sum.)([0-9]+)(.txt)";
     private final Map<Integer, String[]> allFrames = new HashMap<>();
 
@@ -39,6 +41,13 @@ public class Parser {
     public void setDumpDir(String dumpDir) throws IOException {
         this.dumpDir = dumpDir;
         this.storeAllDumpFiles();
+    }
+
+    public Path getInFile() throws IOException {
+        return Path.of(Arrays.stream(Objects.requireNonNull(new File(new File(this.dumpDir).getCanonicalPath()).listFiles()))
+                .map(File::getAbsolutePath)
+                .filter(x -> x.matches(inFilePattern))
+                .findFirst().orElseThrow());
     }
 
     private void storeAllDumpFiles() throws IOException {
@@ -57,14 +66,22 @@ public class Parser {
         Map<Integer, String> dumpFrames = this.getTimeFrames(dumpFilePattern);
         Map<Integer, String> gridFrames = this.getTimeFrames(gridFilePattern);
         Map<Integer, String> targetFrames = this.getTimeFrames(targetFilePattern);
+        Map<Integer, String> influxFrames = this.getTimeFrames(influxFilePattern);
 
-        for (Integer key : dumpFrames.keySet()) {
-            allFrames.put(key, new String[]{dumpFrames.get(key), null, null});
+        Set<Integer> frames = Config.parsPoints ? dumpFrames.keySet() : gridFrames.keySet();
+        for (Integer key : frames) {
+            allFrames.put(key, new String[4]);
+            if (dumpFrames.containsKey(key)) {
+                allFrames.get(key)[0] = dumpFrames.get(key);
+            }
             if (gridFrames.containsKey(key)) {
                 allFrames.get(key)[1] = gridFrames.get(key);
             }
             if (targetFrames.containsKey(key)) {
                 allFrames.get(key)[2] = targetFrames.get(key);
+            }
+            if (influxFrames.containsKey(key)) {
+                allFrames.get(key)[3] = influxFrames.get(key);
             }
         }
     }
@@ -84,7 +101,7 @@ public class Parser {
     private Timeframe parseTimeFrame(String[] files) throws IOException {
         Timeframe timeframe = new Timeframe();
 
-        if (files[0] != null) {
+        if (files[0] != null && Config.parsPoints) {
             timeframe.setPoints(this.parsePoints(files[0]));
         }
 
@@ -94,6 +111,10 @@ public class Parser {
 
         if (files[2] != null) {
             timeframe.setTarget(this.parseTarget(files[2]));
+        }
+
+        if (files[3] != null) {
+            timeframe.setCountPoints(this.parseInflux(files[3]));
         }
 
         return timeframe;
@@ -131,30 +152,50 @@ public class Parser {
 
         List<String> headers = Arrays.stream(fileLines.get(8).replace("ITEM: CELLS ", "").strip().split(" ")).toList();
         int idIndex = headers.indexOf("id");
-        int pIndex = headers.indexOf("c_gTemp[1]");
-        int tIndex = headers.indexOf("c_gTemp[2]");
-        int vIndex = headers.indexOf("c_gridP[1]");
+        int idProc = headers.indexOf("proc");
+        int pIndex = Math.max(headers.indexOf("c_gTemp[1]"), headers.indexOf("f_aveGridTemp[1]"));
+        int tIndex = Math.max(headers.indexOf("c_gTemp[2]"), headers.indexOf("f_aveGridTemp[2]"));
+        int vIndex = Math.max(headers.indexOf("c_gridP[1]"), headers.indexOf("f_aveGridU[1]"));
+        int nIndex = Math.max(headers.indexOf("c_gridP[3]"), headers.indexOf("f_aveGridU[3"));
+        int nrhoIndex = Math.max(headers.indexOf("c_gridP[4]"), headers.indexOf("f_aveGridU[4]"));
 
         for (int i = 9; i < fileLines.size(); i++) {
             String[] params = fileLines.get(i).split(" ");
             float temperature = Float.parseFloat(params[tIndex]);
             float cs = (float) Math.sqrt(gamma * R * temperature);
-            float u = Math.abs(Float.parseFloat(params[vIndex]) / 100);
+            float u = Math.abs(Float.parseFloat(params[vIndex]) / (Config.unitSystemCGS ? 100 : 1));
             grid.addCell(
                     Integer.parseInt(params[idIndex]),
-                    new Float[]{
-                            Float.parseFloat(params[pIndex]),   // density in grid
-                            temperature,                        // temperature in grid
-                            u,                                  // directed velocity by x in grid
-                            cs,                                 // sound velocity
-                            u / cs                              // Mach value
+                    new float[]{
+                            Float.parseFloat(params[pIndex]) / (Config.unitSystemCGS ? 10 : 1),   // density in grid (SI - in Pa, CGS - in barye)
+                            temperature,                            // temperature in grid
+                            u,                                      // directed velocity by x in grid
+                            cs,                                     // sound velocity
+                            u / cs,                                 // Mach value
+                            nIndex != -1 ? Float.parseFloat(params[nIndex]) : 0f,       // Count particles in cell (N count)
+                            nrhoIndex != -1 ? Float.parseFloat(params[nrhoIndex]) : 0f, // Nrho in cell
                     }
             );
+            grid.bindProc(Integer.parseInt(params[idIndex]), idProc == -1 ? 0 : Integer.parseInt(params[idProc]));
         }
 
         fileLines.clear();
 
         return grid;
+    }
+
+    private int parseInflux(String fileName) throws IOException {
+        List<String> fileLines = Files.readAllLines(Path.of(this.dumpDir, fileName));
+        int countPoints = 0;
+
+        for (String fileLine : fileLines) {
+            String countStr = fileLine.trim().replace("Count points: ", "");
+            countPoints = !countStr.isEmpty() ? Integer.parseInt(countStr) : 0;
+        }
+
+        fileLines.clear();
+
+        return countPoints;
     }
 
     private Integer[] parseTarget(String fileName) throws IOException {
@@ -191,6 +232,7 @@ public class Parser {
                         Config.globalParams.put(params[i].strip(), params[i + 1].strip());
                     }
                 }
+                case "units" -> Config.unitSystemCGS = params[1].strip().equals("cgs");
                 case "timestep" -> Config.tStep = Float.parseFloat(params[1].strip());
                 case "create_box" -> {
                     Config.shapeX = Float.parseFloat(params[2].strip()) - Float.parseFloat(params[1].strip());
@@ -231,7 +273,6 @@ public class Parser {
             String[] pointElements = fileLines.get(i).split(" ");
             points.add(new Point(Float.parseFloat(pointElements[1]), Float.parseFloat(pointElements[2])));
         }
-
 
         for (int i = 7 + countPoints + 3; i < 7 + 3 + countPoints + countLines; i++) {
             String[] linesElements = fileLines.get(i).split(" ");
@@ -304,5 +345,63 @@ public class Parser {
         }
 
         return gridSchema;
+    }
+
+    public HashMap<Integer, HashMap<Integer, Integer>> revertGridSchema(HashMap<Integer, GridCell> gridSchema) {
+        HashMap<Integer, HashMap<Integer, Integer>> revertedGridSchema = new HashMap<>();
+
+        for (Integer key: gridSchema.keySet()) {
+            int xKey = Math.round(gridSchema.get(key).xLo / Config.spartaCellSize);
+            int yKey = Math.round(gridSchema.get(key).yLo / Config.spartaCellSize);
+            if (!revertedGridSchema.containsKey(xKey)) {
+                revertedGridSchema.put(xKey, new HashMap<>());
+            }
+            revertedGridSchema.get(xKey).put(yKey, key);
+        }
+
+        return revertedGridSchema;
+    }
+
+    private Integer getGridId(HashMap<Integer, HashMap<Integer, Integer>> revertedGridSchema, float xCoord, float yCoord) {
+        int xKey = Math.round(xCoord / Config.spartaCellSize);
+        int yKey = Math.round(yCoord / Config.spartaCellSize);
+        if (revertedGridSchema.containsKey(xKey)) {
+            if (revertedGridSchema.get(xKey).containsKey(yKey)) {
+                return revertedGridSchema.get(xKey).get(yKey);
+            }
+        }
+        return null;
+    }
+
+    public HashMap<Integer, Float> parseDulovsData(Path dataFileName,
+                                                   Path xFileName,
+                                                   Path yFileName,
+                                                   HashMap<Integer, HashMap<Integer, Integer>> gridSchemaRevert) throws IOException {
+        HashMap<Integer, Float> mappedData = new HashMap<>();
+        ArrayList<List<Float>> data = new ArrayList<>();
+
+        List<String> xFileLines = Files.readAllLines(xFileName);
+        ArrayList<Float> xCoords = xFileLines.stream().map(Float::parseFloat).collect(Collectors.toCollection(ArrayList::new));
+
+        List<String> yFileLines = Files.readAllLines(yFileName);
+        ArrayList<Float> yCoords = yFileLines.stream().map(Float::parseFloat).collect(Collectors.toCollection(ArrayList::new));
+
+        List<String> dataFileLines = Files.readAllLines(dataFileName);
+        for (String dataFileLine : dataFileLines) {
+            String[] densities = dataFileLine.split("\t");
+            data.add(Arrays.stream(densities).map(Float::parseFloat).toList());
+        }
+
+        for (int i = 0; i < xCoords.size(); i++) {
+            for (int j = 0; j < yCoords.size(); j++) {
+                Integer gridId = getGridId(gridSchemaRevert, xCoords.get(i), yCoords.get(j));
+                if (gridId == null) {
+                    continue;
+                }
+                mappedData.put(gridId, data.get(i).get(j));
+            }
+        }
+
+        return mappedData;
     }
 }

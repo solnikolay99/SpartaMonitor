@@ -7,6 +7,8 @@ import java.util.List;
 public class Config {
     public static boolean debugDrawing = Boolean.TRUE;  // debug flag
 
+    public static boolean unitSystemCGS = true;  // система единиц (true - СГС, false - СИ)
+
     // Задание параметров
     public static float shapeX = 27;      // высота расчетной области (в см)
     public static float shapeY = 4;       // ширина расчетной области (в см)
@@ -25,8 +27,9 @@ public class Config {
 
     // New config params
     public static String dumpDirPath = "";
+    public static final boolean parsPoints = false;
 
-    public static int defaultMultiplayer = 200;
+    public static int defaultMultiplayer = 20000;
     public static int multiplayer = defaultMultiplayer;
     public static double kB1 = 1 / 1.38067E-16;
     public static HashMap<String, String> globalParams = new HashMap<>();

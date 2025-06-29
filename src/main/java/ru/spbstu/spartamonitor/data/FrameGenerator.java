@@ -6,12 +6,12 @@ import ru.spbstu.spartamonitor.data.models.Timeframe;
 import ru.spbstu.spartamonitor.logger.Logger;
 
 import java.awt.*;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
+import java.util.*;
 
 public class FrameGenerator implements Runnable {
 
@@ -29,6 +29,8 @@ public class FrameGenerator implements Runnable {
     public HashMap<String, List<Polygon>> surfs = new HashMap<>();
     public static HashMap<Integer, Parser.GridCell> gridSchema = new HashMap<>();
     public static HashMap<Integer, HashMap<Integer, Parser.GridCell>> inSurfSchema = new HashMap<>();
+    public static HashMap<Integer, HashMap<Integer, Integer>> gridSchemaRevert = new HashMap<>();
+    public static HashMap<Integer, Float> dulovsData = new HashMap<>();
 
     private static final FrameGenerator frameGenerator = new FrameGenerator();
 
@@ -47,7 +49,8 @@ public class FrameGenerator implements Runnable {
                 Logger.startTimer("Get all timeframe data");
                 try {
                     this.parser.getAllTimeFrames();
-                    this.parser.parsDumps(this.timeframes, 100, 120);
+                    this.parser.parsDumps(this.timeframes, 90, 101);
+//                    this.parser.parsDumps(this.timeframes, 0, 1);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -116,10 +119,12 @@ public class FrameGenerator implements Runnable {
 
     public void loadInFile(Path filePath) throws IOException {
         curFrame = 0;
-        this.parser.parsInFile(filePath);
-        loadGridSchema(filePath.getParent());
-        loadSurfs(filePath.getParent());
+        this.parser.parsInFile(this.parser.getInFile());
+        loadGridSchema(filePath);
+        loadSurfs(filePath);
         excludeOutSurfGridCells();
+        revertGridSchema();
+        loadDulovsData(filePath);
     }
 
     protected void loadSurfs(Path rootDir) throws IOException {
@@ -134,6 +139,17 @@ public class FrameGenerator implements Runnable {
 
     protected void loadGridSchema(Path rootDir) throws IOException {
         gridSchema = this.parser.parsGridSchema(Path.of(rootDir.toString(), "cells.txt"));
+    }
+
+    protected void revertGridSchema() {
+        gridSchemaRevert = this.parser.revertGridSchema(gridSchema);
+    }
+
+    protected void loadDulovsData(Path rootDir) throws IOException {
+        dulovsData = this.parser.parseDulovsData(Path.of(rootDir.toString(), "Dulov_check.txt"),
+                Path.of(rootDir.toString(), "xx_Dulov_check.txt"),
+                Path.of(rootDir.toString(), "yy_Dulov_check.txt"),
+                gridSchemaRevert);
     }
 
     protected void excludeOutSurfGridCells() {
@@ -198,5 +214,28 @@ public class FrameGenerator implements Runnable {
                 }
             }
         }
+    }
+
+    public void saveDulovsData(Path rootDir) {
+        Path dumpDataFile = Path.of(rootDir.toString(), "Dulovs_data.txt");
+
+        System.out.println("Start saving Dulovs dump");
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(dumpDataFile.toAbsolutePath().toString()))) {
+            String header = "ITEM: CELLS id proc f_aveGridTemp[1] f_aveGridTemp[2] f_aveGridU[1] f_aveGridU[3] f_aveGridU[4]";
+            for (int i = 0; i < 8; i++) {
+                writer.write("");
+                writer.newLine();
+            }
+            writer.write(header);
+            writer.newLine();
+            for (Integer key : dulovsData.keySet()) {
+                writer.write(String.format(Locale.ENGLISH, "%d 0 %.1f 0 0 0 0", key, dulovsData.get(key)));
+                writer.newLine();
+            }
+        } catch (Exception ignore) {
+        }
+
+        System.out.printf("Dulovs dump saved to %s%n", dumpDataFile.toAbsolutePath());
     }
 }

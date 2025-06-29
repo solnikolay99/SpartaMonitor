@@ -5,6 +5,7 @@ public class Timeframe {
     private Number[][] points;
     private Grid grid = new Grid();
     private Integer[] target;
+    private int countPoints = 0;
 
     public Number[][] getPoints() {
         return points;
@@ -28,5 +29,13 @@ public class Timeframe {
 
     public void setTarget(Integer[] target) {
         this.target = target;
+    }
+
+    public int getCountPoints() {
+        return countPoints;
+    }
+
+    public void setCountPoints(int countPoints) {
+        this.countPoints = countPoints;
     }
 }
