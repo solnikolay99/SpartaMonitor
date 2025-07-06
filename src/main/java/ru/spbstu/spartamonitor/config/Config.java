@@ -29,7 +29,7 @@ public class Config {
     public static String dumpDirPath = "";
     public static final boolean parsPoints = false;
 
-    public static int defaultMultiplayer = 20000;
+    public static int defaultMultiplayer = 200;
     public static int multiplayer = defaultMultiplayer;
     public static double kB1 = 1 / 1.38067E-16;
     public static HashMap<String, String> globalParams = new HashMap<>();

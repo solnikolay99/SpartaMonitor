@@ -9,11 +9,13 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.paint.Color;
 import ru.spbstu.spartamonitor.colorize.ColorizeType;
+import ru.spbstu.spartamonitor.config.Config;
 import ru.spbstu.spartamonitor.data.FrameGenerator;
 import ru.spbstu.spartamonitor.data.Parser;
 import ru.spbstu.spartamonitor.data.models.Point;
 import ru.spbstu.spartamonitor.data.models.Polygon;
 import ru.spbstu.spartamonitor.eventbus.EventBusFactory;
+import ru.spbstu.spartamonitor.events.DrawDensityEvent;
 import ru.spbstu.spartamonitor.events.DrawEvent;
 
 import java.util.ArrayList;
@@ -33,7 +35,7 @@ public class MainCanvas extends Canvas {
     private int originalShiftX = 0;
     private int originalShiftY = 0;
 
-    private ColorizeType curColorizeType = ColorizeType.DENSITY;
+    private ColorizeType curColorizeType = ColorizeType.DENSITY_STATIC;
 
     public MainCanvas() {
         this.setOnScroll(this::onZooming);
@@ -120,10 +122,33 @@ public class MainCanvas extends Canvas {
     }
 
     protected Float getDiffByDulov(FrameGenerator.Frame frame, int cellId) {
-        if (FrameGenerator.dulovsData.containsKey(cellId)) {
-            float origCellValue = frame.timeframe.getGrid().getCells().get(cellId)[0];
-            float dulovsValue = FrameGenerator.dulovsData.get(cellId);
-            return Math.abs(origCellValue / dulovsValue * 100);
+        if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF) {
+            if (FrameGenerator.dulovsPressureData.containsKey(cellId)) {
+                float origCellValue = frame.timeframe.getGrid().getCells().get(cellId)[0];
+                float dulovsValue = FrameGenerator.dulovsPressureData.get(cellId);
+                return Math.abs(origCellValue / dulovsValue * 100);
+            }
+        } else if (curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
+            if (FrameGenerator.dulovsPressureData.containsKey(cellId)) {
+                float origCellValue = frame.timeframe.getGrid().getCells().get(cellId)[7];
+                float dulovsValue = FrameGenerator.dulovsPressureData.get(cellId);
+                return Math.abs(origCellValue / dulovsValue * 100);
+            }
+        } else if (curColorizeType == ColorizeType.NRHO_DIF) {
+            if (FrameGenerator.dulovsNConcentrationData.containsKey(cellId)) {
+                float origCellValue = frame.timeframe.getGrid().getCells().get(cellId)[6];
+                float dulovsValue = FrameGenerator.dulovsNConcentrationData.get(cellId);
+                return Math.abs(origCellValue / dulovsValue * 100);
+            }
+        }
+        return null;
+    }
+
+    protected Float getDulovData(int cellId) {
+        if (curColorizeType == ColorizeType.NRHO_DULOV) {
+            if (FrameGenerator.dulovsNConcentrationData.containsKey(cellId)) {
+                return FrameGenerator.dulovsNConcentrationData.get(cellId);
+            }
         }
         return null;
     }
@@ -132,15 +157,17 @@ public class MainCanvas extends Canvas {
         assert colorizeType != null;
 
         Float value = switch (colorizeType) {
-            case DENSITY -> frame.timeframe.getGrid().getCells().get(cellId)[0];
+            case DENSITY_STATIC -> frame.timeframe.getGrid().getCells().get(cellId)[0];
             case TEMPERATURE -> frame.timeframe.getGrid().getCells().get(cellId)[1];
             case VELOCITY -> frame.timeframe.getGrid().getCells().get(cellId)[2];
             case SOUND_VELOCITY -> frame.timeframe.getGrid().getCells().get(cellId)[3];
             case MACH -> frame.timeframe.getGrid().getCells().get(cellId)[4];
             case BIND -> (float) frame.timeframe.getGrid().getProcs().get(cellId);
             case N_COUNT -> frame.timeframe.getGrid().getCells().get(cellId)[5];
-            case NRHO_CGS, NRHO_SI -> frame.timeframe.getGrid().getCells().get(cellId)[6];
-            case DENSITY_DIF -> getDiffByDulov(frame, cellId);
+            case NRHO -> frame.timeframe.getGrid().getCells().get(cellId)[6];
+            case DENSITY_STATIC_DIF, DENSITY_DYNAMIC_DIF, NRHO_DIF -> getDiffByDulov(frame, cellId);
+            case NRHO_DULOV -> getDulovData(cellId);
+            case DENSITY_DYNAMIC -> frame.timeframe.getGrid().getCells().get(cellId)[7];
         };
 
         if (value == null) {
@@ -286,8 +313,10 @@ public class MainCanvas extends Canvas {
         double canvasY = mouseEvent.getY();
 
         int surfX = (int) ((canvasX - shiftBoxX) / multiplayer * 1000) / 5 * 5;
+        int surfX2 = (int) ((float) surfX / Config.spartaCellSize / 1000);
         int surfX1 = (int) ((canvasX - shiftBoxX) / multiplayer * 1000) / 5 * 5 + 5;
         float surfY = (float) ((canvasY - shiftBoxY) / multiplayer * 1000) / 5 * 5 / 1000;
+        int surfY2 = (int) (surfY / Config.spartaCellSize);
         FrameGenerator.Frame frame = FrameGenerator.getFrameGenerator().getFrame(0);
 
         int countCells = 0;
@@ -301,7 +330,7 @@ public class MainCanvas extends Canvas {
             countCells = cellIds.size();
             for (Parser.GridCell gridCell : cellIds.values()) {
                 if (frameCells.containsKey(gridCell.cellId)) {
-                    if (curColorizeType == ColorizeType.DENSITY) {
+                    if (curColorizeType == ColorizeType.DENSITY_STATIC) {
                         if (frameCells.get(gridCell.cellId)[0] > 0f) {
                             cellSumValue += frameCells.get(gridCell.cellId)[0];
                             countCellsWithValue++;
@@ -349,13 +378,71 @@ public class MainCanvas extends Canvas {
                                 cellValue = frameCells.get(gridCell.cellId)[5];
                             }
                         }
-                    } else if (curColorizeType == ColorizeType.NRHO_CGS || curColorizeType == ColorizeType.NRHO_SI) {
+                    } else if (curColorizeType == ColorizeType.NRHO) {
                         if (frameCells.get(gridCell.cellId)[6] < Float.MAX_VALUE) {
                             cellSumValue += frameCells.get(gridCell.cellId)[6];
                             countCellsWithValue++;
                             if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
                                 cellValue = frameCells.get(gridCell.cellId)[6];
                             }
+                        }
+                    } else if (curColorizeType == ColorizeType.DENSITY_DYNAMIC) {
+                        if (frameCells.get(gridCell.cellId)[7] > 0f) {
+                            cellSumValue += frameCells.get(gridCell.cellId)[7];
+                            countCellsWithValue++;
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells.get(gridCell.cellId)[7];
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            if (FrameGenerator.gridSchemaRevert.containsKey(surfX2) &&
+                    FrameGenerator.gridSchemaRevert.get(surfX2).containsKey(surfY2)) {
+                int cellId = FrameGenerator.gridSchemaRevert.get(surfX2).get(surfY2);
+                Map<Integer, float[]> frameCells = frame.timeframe.getGrid().getCells();
+
+                if (frameCells.containsKey(cellId)) {
+                    if (curColorizeType == ColorizeType.DENSITY_STATIC) {
+                        if (frameCells.get(cellId)[0] > 0f) {
+                            cellValue = frameCells.get(cellId)[0];
+                        }
+                    } else if (curColorizeType == ColorizeType.TEMPERATURE) {
+                        if (frameCells.get(cellId)[1] > 0f) {
+                            cellValue = frameCells.get(cellId)[1];
+                        }
+                    } else if (curColorizeType == ColorizeType.VELOCITY) {
+                        if (frameCells.get(cellId)[2] > 0f) {
+                            cellValue = frameCells.get(cellId)[2];
+                        }
+                    } else if (curColorizeType == ColorizeType.SOUND_VELOCITY) {
+                        if (frameCells.get(cellId)[3] > 0f) {
+                            cellValue = frameCells.get(cellId)[3];
+                        }
+                    } else if (curColorizeType == ColorizeType.MACH) {
+                        if (frameCells.get(cellId)[4] < Float.MAX_VALUE) {
+                            cellValue = frameCells.get(cellId)[4];
+                        }
+                    } else if (curColorizeType == ColorizeType.N_COUNT) {
+                        if (frameCells.get(cellId)[5] < Float.MAX_VALUE) {
+                            cellValue = frameCells.get(cellId)[5];
+                        }
+                    } else if (curColorizeType == ColorizeType.NRHO) {
+                        if (frameCells.get(cellId)[6] < Float.MAX_VALUE) {
+                            cellValue = frameCells.get(cellId)[6];
+                        }
+                    } else if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF) {
+                        cellValue = getDiffByDulov(frame, cellId);
+                    } else if (curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
+                        cellValue = getDiffByDulov(frame, cellId);
+                    } else if (curColorizeType == ColorizeType.NRHO_DIF) {
+                        cellValue = getDiffByDulov(frame, cellId);
+                    } else if (curColorizeType == ColorizeType.NRHO_DULOV) {
+                        cellValue = getDulovData(cellId);
+                    } else if (curColorizeType == ColorizeType.DENSITY_DYNAMIC) {
+                        if (frameCells.get(cellId)[7] > 0f) {
+                            cellValue = frameCells.get(cellId)[7];
                         }
                     }
                 }
@@ -388,5 +475,7 @@ public class MainCanvas extends Canvas {
         gc.fillRect(canvasX - ((float) text.length() * 6 / 2) - 1.5, 0, text.length() * 6 + 3, 22);
         gc.setFill(Color.WHITE);
         gc.fillText(text, canvasX - ((float) text.length() * 5 / 2), 15);
+
+        EventBusFactory.getEventBus().post(new DrawDensityEvent((float) surfX / 1000));
     }
 }

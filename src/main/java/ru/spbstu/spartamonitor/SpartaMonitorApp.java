@@ -10,6 +10,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import ru.spbstu.spartamonitor.eventbus.EventBusFactory;
 import ru.spbstu.spartamonitor.events.DrawEvent;
+import ru.spbstu.spartamonitor.listeners.DrawDensityListener;
 import ru.spbstu.spartamonitor.listeners.DrawListener;
 import ru.spbstu.spartamonitor.listeners.ParserListener;
 
@@ -33,6 +34,7 @@ public class SpartaMonitorApp extends Application {
 
         EventBusFactory.getEventBus().register(new ParserListener(this.controller));
         EventBusFactory.getEventBus().register(new DrawListener(this.controller));
+        EventBusFactory.getEventBus().register(new DrawDensityListener(this.controller));
 
         Timeline timeline = new Timeline(
                 new KeyFrame(

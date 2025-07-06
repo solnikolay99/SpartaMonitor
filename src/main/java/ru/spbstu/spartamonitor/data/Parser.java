@@ -134,8 +134,8 @@ public class Parser {
             String[] params = fileLines.get(i).split(" ");
             points[i - 9] = new Number[]{
                     Integer.parseInt(params[idIndex]),
-                    Float.parseFloat(params[xIndex]),
-                    Float.parseFloat(params[yIndex]),
+                    Config.unitSystemCGS ? Float.parseFloat(params[xIndex]) : Float.parseFloat(params[xIndex]) * 100,
+                    Config.unitSystemCGS ? Float.parseFloat(params[yIndex]) : Float.parseFloat(params[yIndex]) * 100,
                     Integer.parseInt(params[cellIdIndex])
             };
         }
@@ -156,6 +156,7 @@ public class Parser {
         int pIndex = Math.max(headers.indexOf("c_gTemp[1]"), headers.indexOf("f_aveGridTemp[1]"));
         int tIndex = Math.max(headers.indexOf("c_gTemp[2]"), headers.indexOf("f_aveGridTemp[2]"));
         int vIndex = Math.max(headers.indexOf("c_gridP[1]"), headers.indexOf("f_aveGridU[1]"));
+        int keIndex = Math.max(headers.indexOf("c_gridP[2]"), headers.indexOf("f_aveGridU[2]"));
         int nIndex = Math.max(headers.indexOf("c_gridP[3]"), headers.indexOf("f_aveGridU[3"));
         int nrhoIndex = Math.max(headers.indexOf("c_gridP[4]"), headers.indexOf("f_aveGridU[4]"));
 
@@ -164,6 +165,9 @@ public class Parser {
             float temperature = Float.parseFloat(params[tIndex]);
             float cs = (float) Math.sqrt(gamma * R * temperature);
             float u = Math.abs(Float.parseFloat(params[vIndex]) / (Config.unitSystemCGS ? 100 : 1));
+            float nrho = nrhoIndex == -1 ? 0f: Float.parseFloat(params[nrhoIndex]);
+            float pDynamic = keIndex == -1 || nrhoIndex == -1 ? 0f
+                    : (2f / 3f * Float.parseFloat(params[keIndex]) * nrho) / (Config.unitSystemCGS ? 10 : 1);
             grid.addCell(
                     Integer.parseInt(params[idIndex]),
                     new float[]{
@@ -173,7 +177,8 @@ public class Parser {
                             cs,                                     // sound velocity
                             u / cs,                                 // Mach value
                             nIndex != -1 ? Float.parseFloat(params[nIndex]) : 0f,       // Count particles in cell (N count)
-                            nrhoIndex != -1 ? Float.parseFloat(params[nrhoIndex]) : 0f, // Nrho in cell
+                            Config.unitSystemCGS ? nrho : (float) (nrho / 1e6), // Nrho in cell
+                            pDynamic,                               // dynamic density in grid (SI - in Pa, CGS - in barye)
                     }
             );
             grid.bindProc(Integer.parseInt(params[idIndex]), idProc == -1 ? 0 : Integer.parseInt(params[idProc]));
@@ -217,7 +222,7 @@ public class Parser {
 
         for (String line : fileLines) {
             line = line.strip();
-            line = line.replaceAll("[\t]", "");
+            line = line.replaceAll("\t", "");
             line = line.replaceAll(" +", " ");
             String[] params = line.strip().split(" ");
             if (params.length == 0) {
@@ -236,7 +241,9 @@ public class Parser {
                 case "timestep" -> Config.tStep = Float.parseFloat(params[1].strip());
                 case "create_box" -> {
                     Config.shapeX = Float.parseFloat(params[2].strip()) - Float.parseFloat(params[1].strip());
+                    Config.shapeX = Config.unitSystemCGS ? Config.shapeX : Config.shapeX * 100;
                     Config.shapeY = Float.parseFloat(params[4].strip()) - Float.parseFloat(params[3].strip());
+                    Config.shapeY = Config.unitSystemCGS ? Config.shapeY : Config.shapeY * 100;
                 }
                 case "create_grid" -> {
                     Config.spartaCellSize = Config.shapeX / Integer.parseInt(params[1].strip());
@@ -271,7 +278,9 @@ public class Parser {
 
         for (int i = 7; i < 7 + countPoints; i++) {
             String[] pointElements = fileLines.get(i).split(" ");
-            points.add(new Point(Float.parseFloat(pointElements[1]), Float.parseFloat(pointElements[2])));
+            float point1 = Config.unitSystemCGS ? Float.parseFloat(pointElements[1]) : Float.parseFloat(pointElements[1]) * 100;
+            float point2 = Config.unitSystemCGS ? Float.parseFloat(pointElements[2]) : Float.parseFloat(pointElements[2]) * 100;
+            points.add(new Point(point1, point2));
         }
 
         for (int i = 7 + countPoints + 3; i < 7 + 3 + countPoints + countLines; i++) {
@@ -336,10 +345,10 @@ public class Parser {
             int cellId = Integer.parseInt(params[idIndex]);
             gridSchema.put(cellId,
                     new GridCell(cellId,
-                            Float.parseFloat(params[xLoIndex]),
-                            Float.parseFloat(params[yLoIndex]),
-                            Float.parseFloat(params[xHiIndex]),
-                            Float.parseFloat(params[yHiIndex])
+                            Config.unitSystemCGS ? Float.parseFloat(params[xLoIndex]) : Float.parseFloat(params[xLoIndex]) * 100,
+                            Config.unitSystemCGS ? Float.parseFloat(params[yLoIndex]) : Float.parseFloat(params[yLoIndex]) * 100,
+                            Config.unitSystemCGS ? Float.parseFloat(params[xHiIndex]) : Float.parseFloat(params[xHiIndex]) * 100,
+                            Config.unitSystemCGS ? Float.parseFloat(params[yHiIndex]) : Float.parseFloat(params[yHiIndex]) * 100
                     )
             );
         }
@@ -380,25 +389,27 @@ public class Parser {
         HashMap<Integer, Float> mappedData = new HashMap<>();
         ArrayList<List<Float>> data = new ArrayList<>();
 
-        List<String> xFileLines = Files.readAllLines(xFileName);
-        ArrayList<Float> xCoords = xFileLines.stream().map(Float::parseFloat).collect(Collectors.toCollection(ArrayList::new));
+        if (Files.exists(dataFileName) && Files.exists(xFileName) && Files.exists(yFileName)) {
+            List<String> xFileLines = Files.readAllLines(xFileName);
+            ArrayList<Float> xCoords = xFileLines.stream().map(Float::parseFloat).collect(Collectors.toCollection(ArrayList::new));
 
-        List<String> yFileLines = Files.readAllLines(yFileName);
-        ArrayList<Float> yCoords = yFileLines.stream().map(Float::parseFloat).collect(Collectors.toCollection(ArrayList::new));
+            List<String> yFileLines = Files.readAllLines(yFileName);
+            ArrayList<Float> yCoords = yFileLines.stream().map(Float::parseFloat).collect(Collectors.toCollection(ArrayList::new));
 
-        List<String> dataFileLines = Files.readAllLines(dataFileName);
-        for (String dataFileLine : dataFileLines) {
-            String[] densities = dataFileLine.split("\t");
-            data.add(Arrays.stream(densities).map(Float::parseFloat).toList());
-        }
+            List<String> dataFileLines = Files.readAllLines(dataFileName);
+            for (String dataFileLine : dataFileLines) {
+                String[] densities = dataFileLine.split("\t");
+                data.add(Arrays.stream(densities).map(Float::parseFloat).toList());
+            }
 
-        for (int i = 0; i < xCoords.size(); i++) {
-            for (int j = 0; j < yCoords.size(); j++) {
-                Integer gridId = getGridId(gridSchemaRevert, xCoords.get(i), yCoords.get(j));
-                if (gridId == null) {
-                    continue;
+            for (int i = 0; i < xCoords.size(); i++) {
+                for (int j = 0; j < yCoords.size(); j++) {
+                    Integer gridId = getGridId(gridSchemaRevert, xCoords.get(i), yCoords.get(j));
+                    if (gridId == null) {
+                        continue;
+                    }
+                    mappedData.put(gridId, data.get(i).get(j));
                 }
-                mappedData.put(gridId, data.get(i).get(j));
             }
         }
 

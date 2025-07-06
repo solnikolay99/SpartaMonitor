@@ -30,7 +30,8 @@ public class FrameGenerator implements Runnable {
     public static HashMap<Integer, Parser.GridCell> gridSchema = new HashMap<>();
     public static HashMap<Integer, HashMap<Integer, Parser.GridCell>> inSurfSchema = new HashMap<>();
     public static HashMap<Integer, HashMap<Integer, Integer>> gridSchemaRevert = new HashMap<>();
-    public static HashMap<Integer, Float> dulovsData = new HashMap<>();
+    public static HashMap<Integer, Float> dulovsPressureData = new HashMap<>();
+    public static HashMap<Integer, Float> dulovsNConcentrationData = new HashMap<>();
 
     private static final FrameGenerator frameGenerator = new FrameGenerator();
 
@@ -49,7 +50,8 @@ public class FrameGenerator implements Runnable {
                 Logger.startTimer("Get all timeframe data");
                 try {
                     this.parser.getAllTimeFrames();
-                    this.parser.parsDumps(this.timeframes, 90, 101);
+//                    this.parser.parsDumps(this.timeframes, 90, 101);
+                    this.parser.parsDumps(this.timeframes, 90, 92);
 //                    this.parser.parsDumps(this.timeframes, 0, 1);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -146,10 +148,12 @@ public class FrameGenerator implements Runnable {
     }
 
     protected void loadDulovsData(Path rootDir) throws IOException {
-        dulovsData = this.parser.parseDulovsData(Path.of(rootDir.toString(), "Dulov_check.txt"),
-                Path.of(rootDir.toString(), "xx_Dulov_check.txt"),
-                Path.of(rootDir.toString(), "yy_Dulov_check.txt"),
-                gridSchemaRevert);
+        Path xFileName = Path.of(rootDir.toString(), "dulov/xx_Dulov_check.txt");
+        Path yFileName = Path.of(rootDir.toString(), "dulov/yy_Dulov_check.txt");
+        dulovsPressureData = this.parser.parseDulovsData(Path.of(rootDir.toString(), "dulov/Dulov_density_check.txt"),
+                xFileName, yFileName, gridSchemaRevert);
+        dulovsNConcentrationData = this.parser.parseDulovsData(Path.of(rootDir.toString(), "dulov/Dulov_n_check.txt"),
+                xFileName, yFileName, gridSchemaRevert);
     }
 
     protected void excludeOutSurfGridCells() {
@@ -229,8 +233,8 @@ public class FrameGenerator implements Runnable {
             }
             writer.write(header);
             writer.newLine();
-            for (Integer key : dulovsData.keySet()) {
-                writer.write(String.format(Locale.ENGLISH, "%d 0 %.1f 0 0 0 0", key, dulovsData.get(key)));
+            for (Integer key : dulovsPressureData.keySet()) {
+                writer.write(String.format(Locale.ENGLISH, "%d 0 %.1f 0 0 0 0", key, dulovsPressureData.get(key)));
                 writer.newLine();
             }
         } catch (Exception ignore) {

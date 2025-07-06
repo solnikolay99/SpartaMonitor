@@ -34,7 +34,7 @@ public class SpartaMonitorController {
     private final Thread fgThread;
     private volatile boolean drawIterationFinished = true;
     private Stage mainStage;
-    private ColorizeType colorizeType = ColorizeType.DENSITY;
+    private ColorizeType colorizeType = ColorizeType.DENSITY_STATIC;
     private boolean drawByPoints = true;
 
     @FXML
@@ -98,7 +98,7 @@ public class SpartaMonitorController {
         frameGenerator.loadInFile(Path.of(this.textDumpFolder.getText()));
 
         animationCanvas.drawMask(frameGenerator);
-        graduationCanvas.colorize(ColorizeType.DENSITY);
+        graduationCanvas.colorize(ColorizeType.DENSITY_STATIC);
 
         frameGenerator.preloadTimeFrames();
 
@@ -193,16 +193,19 @@ public class SpartaMonitorController {
     @FXML
     protected void onColorizeTypeChange() {
         switch (selectColorizeType.getSelectionModel().getSelectedIndex()) {
-            case 0 -> colorizeType = ColorizeType.DENSITY;
-            case 1 -> colorizeType = ColorizeType.TEMPERATURE;
-            case 2 -> colorizeType = ColorizeType.VELOCITY;
-            case 3 -> colorizeType = ColorizeType.SOUND_VELOCITY;
-            case 4 -> colorizeType = ColorizeType.MACH;
-            case 5 -> colorizeType = ColorizeType.BIND;
-            case 6 -> colorizeType = ColorizeType.N_COUNT;
-            case 7 -> colorizeType = ColorizeType.NRHO_CGS;
-            case 8 -> colorizeType = ColorizeType.NRHO_SI;
-            case 9 -> colorizeType = ColorizeType.DENSITY_DIF;
+            case 0 -> colorizeType = ColorizeType.DENSITY_STATIC;
+            case 1 -> colorizeType = ColorizeType.DENSITY_DYNAMIC;
+            case 2 -> colorizeType = ColorizeType.TEMPERATURE;
+            case 3 -> colorizeType = ColorizeType.VELOCITY;
+            case 4 -> colorizeType = ColorizeType.SOUND_VELOCITY;
+            case 5 -> colorizeType = ColorizeType.MACH;
+            case 6 -> colorizeType = ColorizeType.BIND;
+            case 7 -> colorizeType = ColorizeType.N_COUNT;
+            case 8 -> colorizeType = ColorizeType.NRHO;
+            case 9 -> colorizeType = ColorizeType.DENSITY_STATIC_DIF;
+            case 10 -> colorizeType = ColorizeType.DENSITY_DYNAMIC_DIF;
+            case 11 -> colorizeType = ColorizeType.NRHO_DIF;
+            case 12 -> colorizeType = ColorizeType.NRHO_DULOV;
         }
         graduationCanvas.colorize(colorizeType);
         EventBusFactory.getEventBus().post(new DrawEvent(0));
@@ -215,7 +218,7 @@ public class SpartaMonitorController {
     }
 
     @FXML
-    protected void onDumpDulovButtonClick() throws IOException {
+    protected void onDumpDulovButtonClick() {
         frameGenerator.saveDulovsData(Path.of(this.textDumpFolder.getText()));
     }
 
@@ -234,7 +237,7 @@ public class SpartaMonitorController {
 
             String title = String.format("%.0f мкс", (frame.frameNumber) * (tStep / 1e-6 * 100));
             animationCanvas.drawIteration(this.frameGenerator, frame, colorizeType, drawByPoints, title);
-            densityChart.drawIteration(frame);
+            densityChart.drawIteration(frame, colorizeType);
 
             Toolkit.getDefaultToolkit().sync();
 
@@ -242,5 +245,17 @@ public class SpartaMonitorController {
 
             drawIterationFinished = true;
         }
+    }
+
+    public void drawDensityChart(Float xCoord) {
+        FrameGenerator.Frame frame;
+        do {
+            frame = this.frameGenerator.getFrame(0);
+        } while (frame.timeframe == null);
+
+        DensityChart.dulovXLine = xCoord;
+        densityChart.drawIteration(frame, colorizeType);
+
+        Toolkit.getDefaultToolkit().sync();
     }
 }
