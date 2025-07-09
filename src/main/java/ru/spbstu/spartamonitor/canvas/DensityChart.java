@@ -20,7 +20,7 @@ import java.util.Objects;
 public class DensityChart extends LineChart<String, Number> {
 
     private ColorizeType curColorizeType = ColorizeType.DENSITY_STATIC;
-    public static float dulovXLine = 0.5f + 0.005f * 250;
+    public static Float dulovXLine = null;
     public static float dulovYLine = 2.0f;
 
     public DensityChart(@NamedArg("xAxis") Axis<String> xAxis,
@@ -75,12 +75,18 @@ public class DensityChart extends LineChart<String, Number> {
     public void showDulovDiffData(FrameGenerator.Frame frame) {
         HashMap<Integer, Float> dulovData = new HashMap<>();
 
+        float minX = FrameGenerator.gridSchema.get(Collections.min(FrameGenerator.dulovsPressureData.keySet())).xLo;
+        float maxX = FrameGenerator.gridSchema.get(Collections.max(FrameGenerator.dulovsPressureData.keySet())).xLo;
+        if (dulovXLine == null) {
+            dulovXLine = (maxX + minX) / 2f;
+        }
+
         this.getData().clear();
 
         if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF || curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
             for (int cellId : frame.timeframe.getGrid().getCells().keySet()) {
                 Parser.GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
-                if (gridCell.xLo < 0.6f) {
+                if (gridCell.xLo < minX || gridCell.xLo > maxX) {
                     continue;
                 }
                 if (gridCell.yLo <= dulovYLine && dulovYLine < gridCell.yHi) {
@@ -105,9 +111,11 @@ public class DensityChart extends LineChart<String, Number> {
         for (int i = 0; i < countSteps; i += stepSize) {
             Float dulovValue = getDulovData(dulovCells.get(i));
             Float originalValue = getCellValue(frame, dulovCells.get(i));
-            System.out.printf("id = %d; xLo = %.4f; yLo = %.4f%n", dulovCells.get(i),
+            System.out.printf("id = %d; xLo = %.4f; yLo = %.4f; dulov = %.3f; actual = %.3f%n", dulovCells.get(i),
                     FrameGenerator.gridSchema.get(dulovCells.get(i)).xLo,
-                    FrameGenerator.gridSchema.get(dulovCells.get(i)).yLo);
+                    FrameGenerator.gridSchema.get(dulovCells.get(i)).yLo,
+                    dulovValue,
+                    originalValue);
             series1.getData().add(new Data<>(String.valueOf(dulovData.get(dulovCells.get(i))), Objects.requireNonNullElse(dulovValue, 0)));
             series2.getData().add(new XYChart.Data<>(String.valueOf(dulovData.get(dulovCells.get(i))), originalValue));
         }

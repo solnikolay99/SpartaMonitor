@@ -54,7 +54,7 @@
 
     <HBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
           xmlns:fx="http://javafx.com/fxml/1">
-        <TextField fx:id="textDumpFolder" text="E:\dumps_capilary_avg_with_ke_fnum_1e14"/>
+        <TextField fx:id="textDumpFolder" text="E:\dumps"/>
         <Button fx:id="buttonDumpFolder" mnemonicParsing="false" onAction="#onButtonDumpFolderClick"
                 text="Папка с дампом"/>
         <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
