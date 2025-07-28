@@ -94,7 +94,7 @@ public class Parser {
             Timeframe timeframe = this.parseTimeFrame(allFrames.get(sortedKeys.get(i)));
             Logger.releaseTimer("Pars data to timeframe");
             timeFrames.set(i, timeframe);
-            EventBusFactory.getEventBus().post(new ParserEvent((endFrame - startFrame), (startFrame + i + 1)));
+            EventBusFactory.getEventBus().post(new ParserEvent((endFrame - startFrame), (i + 1)));
         }
     }
 

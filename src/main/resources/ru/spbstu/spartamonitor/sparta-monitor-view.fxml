@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.*?>
+<?import javafx.collections.FXCollections?>
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.chart.CategoryAxis?>
 <?import javafx.scene.chart.NumberAxis?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.controlsfx.control.ToggleSwitch?>
 <?import ru.spbstu.spartamonitor.canvas.DensityChart?>
 <?import ru.spbstu.spartamonitor.canvas.GraduationCanvas?>
 <?import ru.spbstu.spartamonitor.canvas.MainCanvas?>
-<?import org.controlsfx.control.ToggleSwitch?>
-<?import java.lang.String?>
-<?import javafx.collections.FXCollections?>
+<?import java.lang.*?>
 <VBox alignment="CENTER_LEFT" minHeight="800.0" minWidth="1920.0" spacing="20.0"
       xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="ru.spbstu.spartamonitor.SpartaMonitorController">
@@ -54,12 +54,26 @@
 
     <HBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
           xmlns:fx="http://javafx.com/fxml/1">
-        <TextField fx:id="textDumpFolder" text="E:\dumps"/>
+        <TextField fx:id="textDumpFolder" text="E:\dumps_77K_1000Pa_original"/>
         <Button fx:id="buttonDumpFolder" mnemonicParsing="false" onAction="#onButtonDumpFolderClick"
                 text="Папка с дампом"/>
         <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
-        <Button fx:id="buttonInit" onAction="#onInitiateButtonClick" text="Инициализация"/>
-        <TextField fx:id="textCountFrames" prefWidth="60.0" text="0"/>
+        <VBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
+              xmlns:fx="http://javafx.com/fxml/1">
+            <HBox alignment="CENTER_LEFT" xmlns="http://javafx.com/javafx/17.0.2-ea"
+                  xmlns:fx="http://javafx.com/fxml/1">
+                <Label text="C "/>
+                <TextField fx:id="startFrameNumber" prefWidth="60.0" text="0"/>
+                <Label text=" по "/>
+                <TextField fx:id="endFrameNumber" prefWidth="60.0" text="10"/>
+            </HBox>
+            <HBox alignment="CENTER_LEFT" xmlns="http://javafx.com/javafx/17.0.2-ea"
+                  xmlns:fx="http://javafx.com/fxml/1">
+                <Label text="Текущий "/>
+                <TextField fx:id="currentFrameNumber" prefWidth="60.0" text="0"/>
+            </HBox>
+            <Button fx:id="buttonInit" onAction="#onInitiateButtonClick" text="Инициализация"/>
+        </VBox>
         <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
         <Button fx:id="buttonSaveAsPicture" mnemonicParsing="false" onAction="#onButtonSaveAsPictureClick"
                 text="Сделать скрин"/>

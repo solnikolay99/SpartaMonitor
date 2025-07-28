@@ -14,6 +14,6 @@ public class ParserListener {
 
     @Subscribe
     public void handleParserEvent(ParserEvent event) {
-        controller.textCountFrames.setText(String.format("%d / %d", event.countFrames(), event.totalFrames()));
+        controller.currentFrameNumber.setText(String.format("%d", event.countFrames()));
     }
 }

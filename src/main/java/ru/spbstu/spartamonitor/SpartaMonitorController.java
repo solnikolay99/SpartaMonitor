@@ -64,7 +64,11 @@ public class SpartaMonitorController {
     @FXML
     public ComboBox<String> selectColorizeType;
     @FXML
-    public TextField textCountFrames;
+    public TextField startFrameNumber;
+    @FXML
+    public TextField endFrameNumber;
+    @FXML
+    public TextField currentFrameNumber;
     @FXML
     public ToggleSwitch switchDrawPointsOrCells;
     @FXML
@@ -100,7 +104,8 @@ public class SpartaMonitorController {
         animationCanvas.drawMask(frameGenerator);
         graduationCanvas.colorize(ColorizeType.DENSITY_STATIC);
 
-        frameGenerator.preloadTimeFrames();
+        frameGenerator.preloadTimeFrames(Integer.parseInt(this.startFrameNumber.getText()),
+                Integer.parseInt(this.endFrameNumber.getText()));
 
         buttonBackward.setDisable(false);
         buttonForward.setDisable(false);

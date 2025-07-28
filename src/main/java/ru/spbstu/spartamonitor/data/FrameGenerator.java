@@ -23,6 +23,8 @@ public class FrameGenerator implements Runnable {
     private final Parser parser = new Parser();
     public volatile boolean isAlive = true;
     private volatile boolean flgPreload = false;
+    private int startFrame = 0;
+    private int endFrame = 0;
 
     public List<Timeframe> timeframes = Collections.synchronizedList(new ArrayList<>());
     private static int curFrame = 0;
@@ -50,9 +52,8 @@ public class FrameGenerator implements Runnable {
                 Logger.startTimer("Get all timeframe data");
                 try {
                     this.parser.getAllTimeFrames();
-//                    this.parser.parsDumps(this.timeframes, 90, 101);
-                    this.parser.parsDumps(this.timeframes, 90, 92);
-//                    this.parser.parsDumps(this.timeframes, 0, 1);
+                    this.timeframes.clear();
+                    this.parser.parsDumps(this.timeframes, startFrame, endFrame);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -85,7 +86,9 @@ public class FrameGenerator implements Runnable {
         this.isRunning = Boolean.FALSE;
     }
 
-    public void preloadTimeFrames() {
+    public void preloadTimeFrames(int startFrame, int endFrame) {
+        this.startFrame = startFrame;
+        this.endFrame = endFrame;
         flgPreload = true;
     }
 
