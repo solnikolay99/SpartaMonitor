@@ -10,10 +10,11 @@ public class Config {
     public static boolean unitSystemCGS = true;  // система единиц (true - СГС, false - СИ)
 
     // Задание параметров
-    public static float shapeX = 27;      // высота расчетной области (в см)
-    public static float shapeY = 4;       // ширина расчетной области (в см)
+    public static float shapeX = 10;      // высота расчетной области (в см)
+    public static float shapeY = 15;       // ширина расчетной области (в см)
     public static float spartaCellSize = 0f;    // размер ячейки (в см)
-    public static float monitorCellSize = 0f;   // размер ячейки (в см)
+    public static float monitorCellSizeX = 0f;  // размер ячейки по X (в см)
+    public static float monitorCellSizeY = 0f;  // размер ячейки по Y (в см)
     public static final int maxBoxX = 1500;     // максимальная высота расчетной области (в точках)
     public static final int maxBoxY = 700;      // максимальная ширина расчетной области (в точках)
     public static int defaultBoxX = maxBoxX;    // базовая высота расчетной области (в точках)

@@ -183,10 +183,10 @@ public class MainCanvas extends Canvas {
     protected void colorizePoints(FrameGenerator.Frame frame, ColorizeType colorizeType) {
         GraphicsContext gc = this.getGraphicsContext2D();
 
-        float xLoBorder = -shiftBoxX * monitorCellSize / zoom;
-        float xHiBorder = (maxBoxX - shiftBoxX) * monitorCellSize / zoom;
-        float yLoBorder = -shiftBoxY * monitorCellSize / zoom;
-        float yHiBorder = (maxBoxY - shiftBoxY) * monitorCellSize / zoom;
+        float xLoBorder = -shiftBoxX * monitorCellSizeX / zoom;
+        float xHiBorder = (maxBoxX - shiftBoxX) * monitorCellSizeX / zoom;
+        float yLoBorder = -shiftBoxY * monitorCellSizeY / zoom;
+        float yHiBorder = (maxBoxY - shiftBoxY) * monitorCellSizeY / zoom;
 
         for (Number[] point : frame.timeframe.getPoints()) {
             if (point[1].floatValue() < xLoBorder || xHiBorder < point[1].floatValue()) {
@@ -215,10 +215,10 @@ public class MainCanvas extends Canvas {
     protected void colorizeCells(FrameGenerator.Frame frame, ColorizeType colorizeType) {
         GraphicsContext gc = this.getGraphicsContext2D();
 
-        float xLoBorder = -shiftBoxX * monitorCellSize / zoom;
-        float xHiBorder = (maxBoxX - shiftBoxX) * monitorCellSize / zoom;
-        float yLoBorder = -shiftBoxY * monitorCellSize / zoom;
-        float yHiBorder = (maxBoxY - shiftBoxY) * monitorCellSize / zoom;
+        float xLoBorder = -shiftBoxX * monitorCellSizeX / zoom;
+        float xHiBorder = (maxBoxX - shiftBoxX) * monitorCellSizeX / zoom;
+        float yLoBorder = -shiftBoxY * monitorCellSizeY / zoom;
+        float yHiBorder = (maxBoxY - shiftBoxY) * monitorCellSizeY / zoom;
 
         for (Integer cellId : frame.timeframe.getGrid().getCells().keySet()) {
             Parser.GridCell gridCell = FrameGenerator.gridSchema.get(cellId);

@@ -247,16 +247,17 @@ public class Parser {
                 }
                 case "create_grid" -> {
                     Config.spartaCellSize = Config.shapeX / Integer.parseInt(params[1].strip());
-                    Config.monitorCellSize = Config.shapeX / Config.maxBoxX;
+                    Config.monitorCellSizeX = Config.shapeX / Config.maxBoxX;
+                    Config.monitorCellSizeY = Config.shapeY / Config.maxBoxY;
                     float coeffX = (float) Config.maxBoxX / Config.shapeX;
                     float coeffY = (float) Config.maxBoxY / Config.shapeY;
                     Config.defaultMultiplayer = (int) Math.min(coeffX, coeffY);
                     if (coeffX < coeffY) {
                         Config.defaultBoxY = (int) (Config.shapeY * Config.defaultMultiplayer);
-                        Config.shiftBoxY = (Config.maxBoxY - Config.defaultBoxY) / 2;
+                        Config.shiftBoxY = Config.defaultBoxY > Config.maxBoxY ? (Config.maxBoxY - Config.defaultBoxY) / 2 : 0;
                     } else {
                         Config.defaultBoxX = (int) (Config.shapeX * Config.defaultMultiplayer);
-                        Config.shiftBoxX = (Config.maxBoxX - Config.defaultBoxX) / 2;
+                        Config.shiftBoxX = Config.defaultBoxX > Config.maxBoxX ? (Config.maxBoxX - Config.defaultBoxX) / 2 : 0;
                     }
                     Config.multiplayer = Config.defaultMultiplayer;
                     Config.mainBoxX = Config.defaultBoxX;

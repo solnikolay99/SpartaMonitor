@@ -1,111 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.collections.FXCollections?>
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.chart.CategoryAxis?>
-<?import javafx.scene.chart.NumberAxis?>
+<?import java.lang.*?>
+<?import javafx.collections.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.chart.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import org.controlsfx.control.ToggleSwitch?>
-<?import ru.spbstu.spartamonitor.canvas.DensityChart?>
-<?import ru.spbstu.spartamonitor.canvas.GraduationCanvas?>
-<?import ru.spbstu.spartamonitor.canvas.MainCanvas?>
-<?import java.lang.*?>
-<VBox alignment="CENTER_LEFT" minHeight="800.0" minWidth="1920.0" spacing="20.0"
-      xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="ru.spbstu.spartamonitor.SpartaMonitorController">
+<?import org.controlsfx.control.*?>
+<?import ru.spbstu.spartamonitor.canvas.*?>
+
+<VBox alignment="CENTER_LEFT" minHeight="800.0" minWidth="1920.0" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.spbstu.spartamonitor.SpartaMonitorController">
     <padding>
-        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0"/>
+        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
     </padding>
 
-    <VBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
-          xmlns:fx="http://javafx.com/fxml/1">
-        <HBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
-              xmlns:fx="http://javafx.com/fxml/1">
-            <VBox alignment="BASELINE_CENTER" minHeight="800" minWidth="1500" spacing="20.0"
-                  xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
+    <VBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
+        <HBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
+            <VBox alignment="BASELINE_LEFT" minHeight="800" minWidth="1500" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
                 <MainCanvas fx:id="animationCanvas" height="700.0" width="1500.0">
                     <VBox.margin>
-                        <Insets left="42.0"/>
+                        <Insets left="42.0" />
                     </VBox.margin>
                 </MainCanvas>
                 <GraduationCanvas fx:id="graduationCanvas" height="80.0" width="1500.0">
                     <VBox.margin>
-                        <Insets left="42.0"/>
+                        <Insets left="42.0" />
                     </VBox.margin>
                 </GraduationCanvas>
             </VBox>
-            <DensityChart fx:id="densityChart" animated="false" horizontalGridLinesVisible="false"
-                          horizontalZeroLineVisible="false" legendVisible="false" prefHeight="400.0" prefWidth="400.0"
-                          stylesheets="@main.css" title="Плотность частиц: 0" verticalGridLinesVisible="false"
-                          verticalZeroLineVisible="false">
+            <DensityChart fx:id="densityChart" animated="false" horizontalGridLinesVisible="false" horizontalZeroLineVisible="false" legendVisible="false" prefHeight="400.0" prefWidth="400.0" stylesheets="@main.css" title="Плотность частиц: 0" verticalGridLinesVisible="false" verticalZeroLineVisible="false">
                 <xAxis>
-                    <CategoryAxis side="LEFT"/>
+                    <CategoryAxis side="LEFT" />
                 </xAxis>
                 <yAxis>
-                    <NumberAxis side="BOTTOM"/>
+                    <NumberAxis side="BOTTOM" />
                 </yAxis>
                 <HBox.margin>
-                    <Insets bottom="140.0" top="140.0"/>
+                    <Insets bottom="140.0" top="140.0" />
                 </HBox.margin>
             </DensityChart>
         </HBox>
     </VBox>
 
-    <HBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
-          xmlns:fx="http://javafx.com/fxml/1">
-        <TextField fx:id="textDumpFolder" text="E:\dumps_77K_1000Pa_original"/>
-        <Button fx:id="buttonDumpFolder" mnemonicParsing="false" onAction="#onButtonDumpFolderClick"
-                text="Папка с дампом"/>
-        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
-        <VBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea"
-              xmlns:fx="http://javafx.com/fxml/1">
-            <HBox alignment="CENTER_LEFT" xmlns="http://javafx.com/javafx/17.0.2-ea"
-                  xmlns:fx="http://javafx.com/fxml/1">
-                <Label text="C "/>
-                <TextField fx:id="startFrameNumber" prefWidth="60.0" text="0"/>
-                <Label text=" по "/>
-                <TextField fx:id="endFrameNumber" prefWidth="60.0" text="10"/>
+    <HBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
+        <TextField fx:id="textDumpFolder" text="E:\dumps_mgiv_ci" />
+        <Button fx:id="buttonDumpFolder" mnemonicParsing="false" onAction="#onButtonDumpFolderClick" text="Папка с дампом" />
+        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER" />
+        <VBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
+            <HBox alignment="CENTER_LEFT" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
+                <Label text="C " />
+                <TextField fx:id="startFrameNumber" prefWidth="60.0" text="0" />
+                <Label text=" по " />
+                <TextField fx:id="endFrameNumber" prefWidth="60.0" text="10" />
             </HBox>
-            <HBox alignment="CENTER_LEFT" xmlns="http://javafx.com/javafx/17.0.2-ea"
-                  xmlns:fx="http://javafx.com/fxml/1">
-                <Label text="Текущий "/>
-                <TextField fx:id="currentFrameNumber" prefWidth="60.0" text="0"/>
+            <HBox alignment="CENTER_LEFT" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
+                <Label text="Текущий " />
+                <TextField fx:id="currentFrameNumber" prefWidth="60.0" text="0" />
             </HBox>
-            <Button fx:id="buttonInit" onAction="#onInitiateButtonClick" text="Инициализация"/>
+            <Button fx:id="buttonInit" onAction="#onInitiateButtonClick" text="Инициализация" />
         </VBox>
-        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
-        <Button fx:id="buttonSaveAsPicture" mnemonicParsing="false" onAction="#onButtonSaveAsPictureClick"
-                text="Сделать скрин"/>
-        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
-        <Button fx:id="buttonBackward" disable="true" onAction="#onBackwardIterationsButtonClick" text="Назад"/>
-        <Button fx:id="buttonPrevStep" disable="true" onAction="#onPrevIterationButtonClick" text="Шаг назад"/>
-        <Button fx:id="buttonStop" disable="true" onAction="#onStopIterationsButtonClick" text="Стоп"/>
-        <Button fx:id="buttonNextStep" disable="true" onAction="#onNextIterationButtonClick" text="Шаг вперёд"/>
-        <Button fx:id="buttonForward" disable="true" onAction="#onForwardIterationsButtonClick" text="Вперёд"/>
-        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
-        <Label text="Раскрашиваем на базе:"/>
+        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER" />
+        <Button fx:id="buttonSaveAsPicture" mnemonicParsing="false" onAction="#onButtonSaveAsPictureClick" text="Сделать скрин" />
+        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER" />
+        <Button fx:id="buttonBackward" disable="true" onAction="#onBackwardIterationsButtonClick" text="Назад" />
+        <Button fx:id="buttonPrevStep" disable="true" onAction="#onPrevIterationButtonClick" text="Шаг назад" />
+        <Button fx:id="buttonStop" disable="true" onAction="#onStopIterationsButtonClick" text="Стоп" />
+        <Button fx:id="buttonNextStep" disable="true" onAction="#onNextIterationButtonClick" text="Шаг вперёд" />
+        <Button fx:id="buttonForward" disable="true" onAction="#onForwardIterationsButtonClick" text="Вперёд" />
+        <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER" />
+        <Label text="Раскрашиваем на базе:" />
         <ComboBox fx:id="selectColorizeType" onAction="#onColorizeTypeChange">
             <items>
                 <FXCollections fx:factory="observableArrayList">
-                    <String fx:value="Статическое давление"/>
-                    <String fx:value="Полное давление"/>
-                    <String fx:value="Температура"/>
-                    <String fx:value="Скорость"/>
-                    <String fx:value="Скорость звука"/>
-                    <String fx:value="Число Маха"/>
-                    <String fx:value="Bind to procs"/>
-                    <String fx:value="N count"/>
-                    <String fx:value="Nrho count CGS"/>
-                    <String fx:value="Разница давлений"/>
-                    <String fx:value="Разница полных давлений"/>
-                    <String fx:value="Разница концентраций"/>
-                    <String fx:value="Nrho count по Дулову"/>
+                    <String fx:value="Статическое давление" />
+                    <String fx:value="Полное давление" />
+                    <String fx:value="Температура" />
+                    <String fx:value="Скорость" />
+                    <String fx:value="Скорость звука" />
+                    <String fx:value="Число Маха" />
+                    <String fx:value="Bind to procs" />
+                    <String fx:value="N count" />
+                    <String fx:value="Nrho count CGS" />
+                    <String fx:value="Разница давлений" />
+                    <String fx:value="Разница полных давлений" />
+                    <String fx:value="Разница концентраций" />
+                    <String fx:value="Nrho count по Дулову" />
                 </FXCollections>
             </items>
         </ComboBox>
-        <ToggleSwitch fx:id="switchDrawPointsOrCells" onMouseClicked="#onDrawTypeChange"
-                      text="Отрисовывать по точкам / ячейкам"/>
+        <ToggleSwitch fx:id="switchDrawPointsOrCells" onMouseClicked="#onDrawTypeChange" text="Отрисовывать по точкам / ячейкам" />
         <!--<Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER"/>
         <Button visible="false" fx:id="buttonDumpDulov" onAction="#onDumpDulovButtonClick" text="Дулов дамп"/>-->
     </HBox>
