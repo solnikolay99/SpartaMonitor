@@ -122,17 +122,12 @@ public class FrameGenerator implements Runnable {
         return surfs;
     }
 
-    public void loadInFile(Path filePath) throws IOException {
+    public void loadInFile() throws IOException {
         curFrame = 0;
         this.parser.parsInFile(this.parser.getInFile());
-        loadGridSchema(filePath);
-        loadSurfs(filePath);
-        excludeOutSurfGridCells();
-        revertGridSchema();
-        loadDulovsData(filePath);
     }
 
-    protected void loadSurfs(Path rootDir) throws IOException {
+    public void loadSurfs(Path rootDir) throws IOException {
         surfs = new HashMap<>();
         for (String filePath : Config.surfFiles) {
             ArrayList<Polygon> polygons = this.parser.parsSurfFile(Path.of(rootDir.toString(), filePath));
@@ -140,6 +135,12 @@ public class FrameGenerator implements Runnable {
                 surfs.put(filePath, polygons);
             }
         }
+    }
+
+    public void loadGrid(Path filePath) throws IOException {
+        loadGridSchema(filePath);
+        excludeOutSurfGridCells();
+        revertGridSchema();
     }
 
     protected void loadGridSchema(Path rootDir) throws IOException {
@@ -150,7 +151,7 @@ public class FrameGenerator implements Runnable {
         gridSchemaRevert = this.parser.revertGridSchema(gridSchema);
     }
 
-    protected void loadDulovsData(Path rootDir) throws IOException {
+    public void loadDulovsData(Path rootDir) throws IOException {
         Path xFileName = Path.of(rootDir.toString(), "dulov/xx_Dulov_check.txt");
         Path yFileName = Path.of(rootDir.toString(), "dulov/yy_Dulov_check.txt");
         dulovsPressureData = this.parser.parseDulovsData(Path.of(rootDir.toString(), "dulov/Dulov_density_check.txt"),

@@ -1,8 +1,9 @@
 package ru.spbstu.spartamonitor;
 
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
@@ -23,7 +24,6 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.RenderedImage;
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Path;
 
 import static ru.spbstu.spartamonitor.config.Config.tStep;
@@ -94,12 +94,63 @@ public class SpartaMonitorController {
         Config.dumpDirPath = textDumpFolder.getText();
     }
 
+    protected void showAlert(String title, String header, String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText(header);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
     @FXML
-    protected void onInitiateButtonClick() throws IOException {
+    protected void onInitiateButtonClick() {
         loadConfig();
 
-        frameGenerator.setDumpDir(this.textDumpFolder.getText());
-        frameGenerator.loadInFile(Path.of(this.textDumpFolder.getText()));
+        try {
+            frameGenerator.setDumpDir(this.textDumpFolder.getText());
+        } catch (Exception ignore) {
+            showAlert("Проблема с файлами дампов",
+                    "Не смогли загрузить файлы дампов",
+                    "Либо они отсутствуют в папке назначения, либо не соответствуют ожидаемому формату.");
+            return;
+        }
+
+        try {
+            frameGenerator.loadInFile();
+        } catch (Exception ignore) {
+            showAlert("Проблема с загрузкой файла конфигурации",
+                    "Не смогли загрузить файл in.step / in.ci.step",
+                    "Файл должен находиться в папке назначения на первом уровне.");
+            return;
+        }
+
+        try {
+            frameGenerator.loadSurfs(Path.of(this.textDumpFolder.getText()));
+        } catch (Exception ignore) {
+            showAlert("Проблема с загрузкой файла(-ов) поверхностей",
+                    "Не смогли загрузить файл(-ы) поверхностей",
+                    "Файлы поверхностей либо отсутствуют по указанному пути, либо нечитаемы.");
+            return;
+        }
+
+        try {
+            frameGenerator.loadGrid(Path.of(this.textDumpFolder.getText()));
+        } catch (Exception ignore) {
+            showAlert("Проблема с загрузкой файла расчётной сетки",
+                    "Не смогли загрузить или обработать файл cells.txt",
+                    "Файлы cells.txt либо отсутствует по указанному пути, либо нечитаем, либо несовместим с другими данными.");
+            return;
+        }
+
+        try {
+            frameGenerator.loadDulovsData(Path.of(this.textDumpFolder.getText()));
+        } catch (Exception ignore) {
+            showAlert("Проблема с загрузкой файла скейлинга Дулова",
+                    "Не смогли загрузить или обработать файлы скейлинга дулова",
+                    "Проверить наличие и корректность файлов dulov/xx_Dulov_check.txt, dulov/yy_Dulov_check.txt," +
+                            "dulov/Dulov_density_check.txt, dulov/Dulov_n_check.txt в папке дампа.");
+            return;
+        }
 
         animationCanvas.drawMask(frameGenerator);
         graduationCanvas.colorize(ColorizeType.DENSITY_STATIC);
