@@ -10,8 +10,8 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 
 public class FrameGenerator implements Runnable {
 
@@ -50,13 +50,21 @@ public class FrameGenerator implements Runnable {
         while (isAlive) {
             if (flgPreload) {
                 Logger.startTimer("Get all timeframe data");
+
                 try {
                     this.parser.getAllTimeFrames();
-                    this.timeframes.clear();
-                    this.parser.parsDumps(this.timeframes, startFrame, endFrame);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+                } catch (Exception e) {
+                    System.out.println("\u001B[31m Не смогли разбить файлы дампов на группы \u001B[0m");
                 }
+
+                this.timeframes.clear();
+
+                try {
+                    this.parser.parsDumps(this.timeframes, startFrame, endFrame);
+                } catch (Exception e) {
+                    System.out.println("\u001B[31m Не смогли распарсить файлы дампов \u001B[0m");
+                }
+
                 Logger.releaseTimer("Get all timeframe data");
 
                 flgPreload = false;
