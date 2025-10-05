@@ -1,48 +1,49 @@
-package ru.spbstu.spartamonitor.canvas;
+package ru.spbstu.spartamonitor.canvas
 
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.paint.Color;
-import ru.spbstu.spartamonitor.colorize.ColorSchema;
-import ru.spbstu.spartamonitor.colorize.ColorizeType;
+import javafx.scene.canvas.Canvas
+import javafx.scene.paint.Color
+import ru.spbstu.spartamonitor.colorize.ColorSchema.colorSchema
+import ru.spbstu.spartamonitor.colorize.ColorizeType
 
-public class GraduationCanvas extends Canvas {
+class GraduationCanvas : Canvas() {
+    fun colorize(graduation: ColorizeType) {
+        val gc = this.getGraphicsContext2D()
+        val colorStep = this.width / colorSchema.size
+        val countTextSteps = ((graduation.maxValue - graduation.minValue) / graduation.stepValue).toInt()
+        val countSmallTextSteps = ((graduation.maxValue - graduation.minValue) / graduation.smallStepValue).toInt()
+        val textStep = colorSchema.size * colorStep / countTextSteps
+        val smallTextStep = colorSchema.size * colorStep / countSmallTextSteps
 
-    public void colorize(ColorizeType graduation) {
-        GraphicsContext gc = this.getGraphicsContext2D();
-        double colorStep = this.getWidth() / ColorSchema.INSTANCE.getColorSchema().size();
-        int countTextSteps = (int) ((graduation.getMaxValue() - graduation.getMinValue()) / graduation.getStepValue());
-        int countSmallTextSteps = (int) ((graduation.getMaxValue() - graduation.getMinValue()) / graduation.getSmallStepValue());
-        double textStep = ColorSchema.INSTANCE.getColorSchema().size() * colorStep / countTextSteps;
-        double smallTextStep = ColorSchema.INSTANCE.getColorSchema().size() * colorStep / countSmallTextSteps;
+        gc.clearRect(0.0, 0.0, this.width, this.height)
 
-        gc.clearRect(0, 0, this.getWidth(), this.getHeight());
-
-        for (int i = 0; i < ColorSchema.INSTANCE.getColorSchema().size(); i++) {
-            gc.setFill(ColorSchema.INSTANCE.getColorSchema().get(i));
-            gc.fillRect(colorStep * i, 40, colorStep, 40);
+        for (i in colorSchema.indices) {
+            gc.fill = colorSchema[i]
+            gc.fillRect(colorStep * i, 40.0, colorStep, 40.0)
         }
 
-        gc.setFill(Color.GRAY);
-        gc.fillText(String.valueOf(graduation.getMinValue()), 0, 25);
-        gc.fillRect(0, 30, 2, 10);
-        for (int i = 1; i < countTextSteps; i++) {
-            String text;
-            if (graduation.getStepValue() > 1e5) {
-                text = String.valueOf(graduation.getMinValue() + graduation.getStepValue() * i);
+        gc.fill = Color.GRAY
+        gc.fillText(graduation.minValue.toString(), 0.0, 25.0)
+        gc.fillRect(0.0, 30.0, 2.0, 10.0)
+        for (i in 1 until countTextSteps) {
+            val text = if (graduation.stepValue > 1e5) {
+                (graduation.minValue + graduation.stepValue * i).toString()
             } else {
-                text = String.format("%.0f", graduation.getMinValue() + graduation.getStepValue() * i);
+                String.format("%.0f", graduation.minValue + graduation.stepValue * i)
             }
-            gc.fillText(text, i * textStep - 7, 25);
-            gc.fillRect(i * textStep - 1, 30, 2, 10);
+            gc.fillText(text, i * textStep - 7, 25.0)
+            gc.fillRect(i * textStep - 1, 30.0, 2.0, 10.0)
         }
-        gc.fillText(String.valueOf(graduation.getMaxValue()), countTextSteps * textStep - 25, 25);
-        gc.fillRect(colorStep * ColorSchema.INSTANCE.getColorSchema().size() - 2, 30, 2, 10);
+        gc.fillText(graduation.maxValue.toString(), countTextSteps * textStep - 25, 25.0)
+        gc.fillRect(colorStep * colorSchema.size - 2, 30.0, 2.0, 10.0)
 
-        for (int i = 1; i < countSmallTextSteps; i++) {
-            gc.fillRect(i * smallTextStep, 34, 1, 6);
+        for (i in 1 until countSmallTextSteps) {
+            gc.fillRect(i * smallTextStep, 34.0, 1.0, 6.0)
         }
 
-        gc.fillText(String.format("%s, %s", graduation.getLabel(), graduation.getUnits()), (countTextSteps * textStep) / 2 - 40, 10);
+        gc.fillText(
+            String.format("%s, %s", graduation.label, graduation.units),
+            (countTextSteps * textStep) / 2 - 40,
+            10.0
+        )
     }
 }

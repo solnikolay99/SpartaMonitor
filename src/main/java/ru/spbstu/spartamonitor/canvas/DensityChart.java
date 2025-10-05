@@ -7,6 +7,7 @@ import javafx.scene.chart.Axis;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.XYChart;
 import ru.spbstu.spartamonitor.calculate.Calculation;
+import ru.spbstu.spartamonitor.calculate.Diameter;
 import ru.spbstu.spartamonitor.colorize.ColorizeType;
 import ru.spbstu.spartamonitor.data.FrameGenerator;
 import ru.spbstu.spartamonitor.data.Parser;
@@ -147,7 +148,7 @@ public class DensityChart extends LineChart<String, Number> {
             Series<String, Number> series = new Series<>();
 
             int maxY = 0;
-            Calculation.Diameter diameter = Calculation.calculateTargetDiameter(frame.timeframe, 0.5f);
+            Diameter diameter = new Calculation().calculateTargetDiameter(frame.timeframe, 0.5f);
 
             for (int i = 0; i < frame.timeframe.getTarget().size(); i++) {
                 series.getData().add(new Data<>(String.valueOf(i * 8 / 10), frame.timeframe.getTarget().get(i)));
@@ -156,20 +157,20 @@ public class DensityChart extends LineChart<String, Number> {
             this.getData().add(series);
 
             Series<String, Number> series2 = new Series<>();
-            series2.getData().add(new Data<>(String.valueOf(diameter.leftBorder / 10), 0));
-            series2.getData().add(new Data<>(String.valueOf(diameter.leftBorder / 10), maxY));
+            series2.getData().add(new Data<>(String.valueOf(diameter.getLeftBorder() / 10), 0));
+            series2.getData().add(new Data<>(String.valueOf(diameter.getLeftBorder() / 10), maxY));
             this.getData().add(series2);
 
             Series<String, Number> series3 = new Series<>();
-            series3.getData().add(new Data<>(String.valueOf(diameter.rightBorder / 10), 0));
-            series3.getData().add(new Data<>(String.valueOf(diameter.rightBorder / 10), maxY));
+            series3.getData().add(new Data<>(String.valueOf(diameter.getRightBorder() / 10), 0));
+            series3.getData().add(new Data<>(String.valueOf(diameter.getRightBorder() / 10), maxY));
             this.getData().add(series3);
 
-            targetDiameter = (float) diameter.diameter / 10;
+            targetDiameter = (float) diameter.getDiameter() / 10;
         } else {
             if (frame.timeframe != null) {
                 int maxY = 0;
-                Calculation.Diameter diameter = Calculation.calculateTargetDiameter(frame.timeframe, 0.5f);
+                Diameter diameter = new Calculation().calculateTargetDiameter(frame.timeframe, 0.5f);
 
                 for (int i = 0; i < frame.timeframe.getTarget().size(); i++) {
                     XYChart.Data<String, Number> element = this.getData().getFirst().getData().get(i);
@@ -178,16 +179,16 @@ public class DensityChart extends LineChart<String, Number> {
                     targetPoints += frame.timeframe.getTarget().get(i);
                 }
 
-                this.getData().get(1).getData().getFirst().setXValue(String.valueOf(diameter.leftBorder / 10));
+                this.getData().get(1).getData().getFirst().setXValue(String.valueOf(diameter.getLeftBorder() / 10));
                 this.getData().get(1).getData().getFirst().setYValue(0);
-                this.getData().get(1).getData().get(1).setXValue(String.valueOf(diameter.leftBorder / 10));
+                this.getData().get(1).getData().get(1).setXValue(String.valueOf(diameter.getLeftBorder() / 10));
                 this.getData().get(1).getData().get(1).setYValue(maxY);
-                this.getData().get(2).getData().getFirst().setXValue(String.valueOf(diameter.rightBorder / 10));
+                this.getData().get(2).getData().getFirst().setXValue(String.valueOf(diameter.getRightBorder() / 10));
                 this.getData().get(2).getData().getFirst().setYValue(0);
-                this.getData().get(2).getData().get(1).setXValue(String.valueOf(diameter.rightBorder / 10));
+                this.getData().get(2).getData().get(1).setXValue(String.valueOf(diameter.getRightBorder() / 10));
                 this.getData().get(2).getData().get(1).setYValue(maxY);
 
-                targetDiameter = (float) diameter.diameter / 10;
+                targetDiameter = (float) diameter.getDiameter() / 10;
             } else {
                 this.getData().get(0).getData().forEach(element -> element.setYValue(0));
                 this.getData().get(1).getData().forEach(element -> element.setYValue(0));
