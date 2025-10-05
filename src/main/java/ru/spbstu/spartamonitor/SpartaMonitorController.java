@@ -1,5 +1,6 @@
 package ru.spbstu.spartamonitor;
 
+import config.Config;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -13,7 +14,6 @@ import ru.spbstu.spartamonitor.canvas.DensityChart;
 import ru.spbstu.spartamonitor.canvas.GraduationCanvas;
 import ru.spbstu.spartamonitor.canvas.MainCanvas;
 import ru.spbstu.spartamonitor.colorize.ColorizeType;
-import ru.spbstu.spartamonitor.config.Config;
 import ru.spbstu.spartamonitor.data.FrameGenerator;
 import ru.spbstu.spartamonitor.eventbus.EventBusFactory;
 import ru.spbstu.spartamonitor.events.DrawEvent;
@@ -26,7 +26,7 @@ import java.awt.image.RenderedImage;
 import java.io.File;
 import java.nio.file.Path;
 
-import static ru.spbstu.spartamonitor.config.Config.tStep;
+import static config.ConfigKt.PARSE_POINTS;
 
 public class SpartaMonitorController {
 
@@ -83,8 +83,8 @@ public class SpartaMonitorController {
         this.mainStage = stage;
 
         selectColorizeType.getSelectionModel().select(0);
-        if (!Config.parsPoints) {
-            drawByPoints = Config.parsPoints;
+        if (!PARSE_POINTS) {
+            drawByPoints = PARSE_POINTS;
             switchDrawPointsOrCells.setSelected(true);
             switchDrawPointsOrCells.setDisable(true);
         }
@@ -291,7 +291,7 @@ public class SpartaMonitorController {
 
             Logger.startTimer("Draw iteration");
 
-            String title = String.format("%.0f мкс", (frame.frameNumber) * (tStep / 1e-6 * 100));
+            String title = String.format("%.0f мкс", (frame.frameNumber) * (Config.tStep / 1e-6 * 100));
             animationCanvas.drawIteration(this.frameGenerator, frame, colorizeType, drawByPoints, title);
             densityChart.drawIteration(frame, colorizeType);
 

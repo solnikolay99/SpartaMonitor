@@ -1,5 +1,6 @@
 package ru.spbstu.spartamonitor.canvas;
 
+import config.Config;
 import javafx.beans.NamedArg;
 import javafx.collections.ObservableList;
 import javafx.scene.chart.Axis;
@@ -7,7 +8,6 @@ import javafx.scene.chart.LineChart;
 import javafx.scene.chart.XYChart;
 import ru.spbstu.spartamonitor.calculate.Calculation;
 import ru.spbstu.spartamonitor.colorize.ColorizeType;
-import ru.spbstu.spartamonitor.config.Config;
 import ru.spbstu.spartamonitor.data.FrameGenerator;
 import ru.spbstu.spartamonitor.data.Parser;
 
@@ -143,40 +143,39 @@ public class DensityChart extends LineChart<String, Number> {
         BigDecimal outTargetPoints = new BigDecimal(0);
 
         if (this.getData().isEmpty()) {
-            if (frame.timeframe.getTarget() != null) {
-                XYChart.Series<String, Number> series = new XYChart.Series<>();
+            frame.timeframe.getTarget();
+            Series<String, Number> series = new Series<>();
 
-                int maxY = 0;
-                Calculation.Diameter diameter = Calculation.calculateTargetDiameter(frame.timeframe, 0.5f);
+            int maxY = 0;
+            Calculation.Diameter diameter = Calculation.calculateTargetDiameter(frame.timeframe, 0.5f);
 
-                for (int i = 0; i < frame.timeframe.getTarget().length; i++) {
-                    series.getData().add(new XYChart.Data<>(String.valueOf(i * 8 / 10), frame.timeframe.getTarget()[i]));
-                    maxY = Math.max(maxY, frame.timeframe.getTarget()[i]);
-                }
-                this.getData().add(series);
-
-                XYChart.Series<String, Number> series2 = new XYChart.Series<>();
-                series2.getData().add(new XYChart.Data<>(String.valueOf(diameter.leftBorder / 10), 0));
-                series2.getData().add(new XYChart.Data<>(String.valueOf(diameter.leftBorder / 10), maxY));
-                this.getData().add(series2);
-
-                XYChart.Series<String, Number> series3 = new XYChart.Series<>();
-                series3.getData().add(new XYChart.Data<>(String.valueOf(diameter.rightBorder / 10), 0));
-                series3.getData().add(new XYChart.Data<>(String.valueOf(diameter.rightBorder / 10), maxY));
-                this.getData().add(series3);
-
-                targetDiameter = (float) diameter.diameter / 10;
+            for (int i = 0; i < frame.timeframe.getTarget().size(); i++) {
+                series.getData().add(new Data<>(String.valueOf(i * 8 / 10), frame.timeframe.getTarget().get(i)));
+                maxY = Math.max(maxY, frame.timeframe.getTarget().get(i));
             }
+            this.getData().add(series);
+
+            Series<String, Number> series2 = new Series<>();
+            series2.getData().add(new Data<>(String.valueOf(diameter.leftBorder / 10), 0));
+            series2.getData().add(new Data<>(String.valueOf(diameter.leftBorder / 10), maxY));
+            this.getData().add(series2);
+
+            Series<String, Number> series3 = new Series<>();
+            series3.getData().add(new Data<>(String.valueOf(diameter.rightBorder / 10), 0));
+            series3.getData().add(new Data<>(String.valueOf(diameter.rightBorder / 10), maxY));
+            this.getData().add(series3);
+
+            targetDiameter = (float) diameter.diameter / 10;
         } else {
-            if (frame.timeframe != null && frame.timeframe.getTarget() != null) {
+            if (frame.timeframe != null) {
                 int maxY = 0;
                 Calculation.Diameter diameter = Calculation.calculateTargetDiameter(frame.timeframe, 0.5f);
 
-                for (int i = 0; i < frame.timeframe.getTarget().length; i++) {
+                for (int i = 0; i < frame.timeframe.getTarget().size(); i++) {
                     XYChart.Data<String, Number> element = this.getData().getFirst().getData().get(i);
-                    element.setYValue(frame.timeframe.getTarget()[i]);
-                    maxY = Math.max(maxY, frame.timeframe.getTarget()[i]);
-                    targetPoints += frame.timeframe.getTarget()[i];
+                    element.setYValue(frame.timeframe.getTarget().get(i));
+                    maxY = Math.max(maxY, frame.timeframe.getTarget().get(i));
+                    targetPoints += frame.timeframe.getTarget().get(i);
                 }
 
                 this.getData().get(1).getData().getFirst().setXValue(String.valueOf(diameter.leftBorder / 10));

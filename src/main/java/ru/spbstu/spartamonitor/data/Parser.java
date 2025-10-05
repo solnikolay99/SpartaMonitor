@@ -1,6 +1,6 @@
 package ru.spbstu.spartamonitor.data;
 
-import ru.spbstu.spartamonitor.config.Config;
+import config.Config;
 import ru.spbstu.spartamonitor.data.models.Grid;
 import ru.spbstu.spartamonitor.data.models.Point;
 import ru.spbstu.spartamonitor.data.models.Polygon;
@@ -14,9 +14,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static config.ConfigKt.*;
 
 public class Parser {
 
@@ -68,7 +69,7 @@ public class Parser {
         Map<Integer, String> targetFrames = this.getTimeFrames(targetFilePattern);
         Map<Integer, String> influxFrames = this.getTimeFrames(influxFilePattern);
 
-        Set<Integer> frames = Config.parsPoints ? dumpFrames.keySet() : gridFrames.keySet();
+        Set<Integer> frames = PARSE_POINTS ? dumpFrames.keySet() : gridFrames.keySet();
         for (Integer key : frames) {
             allFrames.put(key, new String[4]);
             if (dumpFrames.containsKey(key)) {
@@ -101,7 +102,7 @@ public class Parser {
     private Timeframe parseTimeFrame(String[] files) throws IOException {
         Timeframe timeframe = new Timeframe();
 
-        if (files[0] != null && Config.parsPoints) {
+        if (files[0] != null && PARSE_POINTS) {
             timeframe.setPoints(this.parsePoints(files[0]));
         }
 
@@ -120,9 +121,9 @@ public class Parser {
         return timeframe;
     }
 
-    private Number[][] parsePoints(String fileName) throws IOException {
+    private ArrayList<Number[]> parsePoints(String fileName) throws IOException {
         List<String> fileLines = Files.readAllLines(Path.of(this.dumpDir, fileName));
-        Number[][] points = new Number[fileLines.size() - 9][4];
+        ArrayList<Number[]> points = new ArrayList<>();
 
         List<String> headers = Arrays.stream(fileLines.get(8).replace("ITEM: ATOMS ", "").strip().split(" ")).toList();
         int xIndex = headers.indexOf("x");
@@ -132,12 +133,12 @@ public class Parser {
 
         for (int i = 9; i < fileLines.size(); i++) {
             String[] params = fileLines.get(i).split(" ");
-            points[i - 9] = new Number[]{
+            points.add(new Number[]{
                     Integer.parseInt(params[idIndex]),
                     Config.unitSystemCGS ? Float.parseFloat(params[xIndex]) : Float.parseFloat(params[xIndex]) * 100,
                     Config.unitSystemCGS ? Float.parseFloat(params[yIndex]) : Float.parseFloat(params[yIndex]) * 100,
                     Integer.parseInt(params[cellIdIndex])
-            };
+            });
         }
 
         fileLines.clear();
@@ -165,7 +166,7 @@ public class Parser {
             float temperature = Float.parseFloat(params[tIndex]);
             float cs = (float) Math.sqrt(gamma * R * temperature);
             float u = Math.abs(Float.parseFloat(params[vIndex]) / (Config.unitSystemCGS ? 100 : 1));
-            float nrho = nrhoIndex == -1 ? 0f: Float.parseFloat(params[nrhoIndex]);
+            float nrho = nrhoIndex == -1 ? 0f : Float.parseFloat(params[nrhoIndex]);
             float pDynamic = keIndex == -1 || nrhoIndex == -1 ? 0f
                     : (2f / 3f * Float.parseFloat(params[keIndex]) * nrho) / (Config.unitSystemCGS ? 10 : 1);
             grid.addCell(
@@ -203,13 +204,13 @@ public class Parser {
         return countPoints;
     }
 
-    private Integer[] parseTarget(String fileName) throws IOException {
+    private List<Integer> parseTarget(String fileName) throws IOException {
         List<String> fileLines = Files.readAllLines(Path.of(this.dumpDir, fileName));
-        Integer[] bars = new Integer[fileLines.size()];
+        ArrayList<Integer> bars = new ArrayList<>();
 
-        for (int i = 0; i < fileLines.size(); i++) {
-            String[] params = fileLines.get(i).split(" ");
-            bars[i] = Integer.parseInt(params[1]);
+        for (String fileLine : fileLines) {
+            String[] params = fileLine.split(" ");
+            bars.add(Integer.parseInt(params[1]));
         }
 
         fileLines.clear();
@@ -247,17 +248,17 @@ public class Parser {
                 }
                 case "create_grid" -> {
                     Config.spartaCellSize = Config.shapeX / Integer.parseInt(params[1].strip());
-                    Config.monitorCellSizeX = Config.shapeX / Config.maxBoxX;
-                    Config.monitorCellSizeY = Config.shapeY / Config.maxBoxY;
-                    float coeffX = (float) Config.maxBoxX / Config.shapeX;
-                    float coeffY = (float) Config.maxBoxY / Config.shapeY;
+                    Config.monitorCellSizeX = Config.shapeX / MAX_BOX_X;
+                    Config.monitorCellSizeY = Config.shapeY / MAX_BOX_Y;
+                    float coeffX = (float) MAX_BOX_X / Config.shapeX;
+                    float coeffY = (float) MAX_BOX_Y / Config.shapeY;
                     Config.defaultMultiplayer = (int) Math.min(coeffX, coeffY);
                     if (coeffX < coeffY) {
                         Config.defaultBoxY = (int) (Config.shapeY * Config.defaultMultiplayer);
-                        Config.shiftBoxY = Config.defaultBoxY > Config.maxBoxY ? (Config.maxBoxY - Config.defaultBoxY) / 2 : 0;
+                        Config.shiftBoxY = Config.defaultBoxY > MAX_BOX_Y ? (MAX_BOX_Y - Config.defaultBoxY) / 2 : 0;
                     } else {
                         Config.defaultBoxX = (int) (Config.shapeX * Config.defaultMultiplayer);
-                        Config.shiftBoxX = Config.defaultBoxX > Config.maxBoxX ? (Config.maxBoxX - Config.defaultBoxX) / 2 : 0;
+                        Config.shiftBoxX = Config.defaultBoxX > MAX_BOX_X ? (MAX_BOX_X - Config.defaultBoxX) / 2 : 0;
                     }
                     Config.multiplayer = Config.defaultMultiplayer;
                     Config.mainBoxX = Config.defaultBoxX;
@@ -360,7 +361,7 @@ public class Parser {
     public HashMap<Integer, HashMap<Integer, Integer>> revertGridSchema(HashMap<Integer, GridCell> gridSchema) {
         HashMap<Integer, HashMap<Integer, Integer>> revertedGridSchema = new HashMap<>();
 
-        for (Integer key: gridSchema.keySet()) {
+        for (Integer key : gridSchema.keySet()) {
             int xKey = Math.round(gridSchema.get(key).xLo / Config.spartaCellSize);
             int yKey = Math.round(gridSchema.get(key).yLo / Config.spartaCellSize);
             if (!revertedGridSchema.containsKey(xKey)) {

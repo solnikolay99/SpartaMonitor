@@ -1,25 +1,16 @@
-package ru.spbstu.spartamonitor.data.models;
+package ru.spbstu.spartamonitor.data.models
 
-import java.io.Serializable;
+import java.io.Serializable
 
-public class Point implements Serializable, Cloneable {
-    public float x;
-    public float y;
-    public float z;
-
-    public Point(float x,
-                 float y) {
-        this.x = x;
-        this.y = y;
-        this.z = 0;
-    }
-
-    @Override
-    public Point clone() {
+data class Point(
+    val x: Float,
+    val y: Float
+) : Serializable, Cloneable {
+    public override fun clone(): Point {
         try {
-            return (Point) super.clone();
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError();
+            return super.clone() as Point
+        } catch (e: CloneNotSupportedException) {
+            throw AssertionError(e)
         }
     }
 }

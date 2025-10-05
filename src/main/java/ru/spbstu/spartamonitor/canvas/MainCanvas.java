@@ -1,5 +1,6 @@
 package ru.spbstu.spartamonitor.canvas;
 
+import config.Config;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
@@ -8,8 +9,8 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.paint.Color;
+import ru.spbstu.spartamonitor.colorize.ColorSchema;
 import ru.spbstu.spartamonitor.colorize.ColorizeType;
-import ru.spbstu.spartamonitor.config.Config;
 import ru.spbstu.spartamonitor.data.FrameGenerator;
 import ru.spbstu.spartamonitor.data.Parser;
 import ru.spbstu.spartamonitor.data.models.Point;
@@ -23,8 +24,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static ru.spbstu.spartamonitor.colorize.ColorSchema.colorSchema;
-import static ru.spbstu.spartamonitor.config.Config.*;
+import static config.Config.shapeX;
+import static config.ConfigKt.MAX_BOX_X;
+import static config.ConfigKt.MAX_BOX_Y;
 
 public class MainCanvas extends Canvas {
 
@@ -68,11 +70,11 @@ public class MainCanvas extends Canvas {
         GraphicsContext gc = this.getGraphicsContext2D();
         gc.setFill(Color.GRAY);
 
-        for (int i = 0; i <= shapeX; i++) {
-            gc.fillRect(i * multiplayer - 1, shiftBoxY + mainBoxY - 6, 1, 6);
+        for (int i = 0; i <= Config.shapeX; i++) {
+            gc.fillRect(i * Config.multiplayer - 1, Config.shiftBoxY + Config.mainBoxY - 6, 1, 6);
         }
         for (int i = 0; i <= shapeX; i += 5) {
-            gc.fillRect(i * multiplayer - 1, shiftBoxY + mainBoxY - 10, 1, 10);
+            gc.fillRect(i * Config.multiplayer - 1, Config.shiftBoxY + Config.mainBoxY - 10, 1, 10);
         }
     }
 
@@ -100,15 +102,15 @@ public class MainCanvas extends Canvas {
         gc.setImageSmoothing(true);
         gc.clearRect(0, 0, this.getWidth(), this.getHeight());
         gc.setFill(Color.AZURE);
-        gc.fillRect(shiftBoxX, shiftBoxY, mainBoxX, mainBoxY);
+        gc.fillRect(Config.shiftBoxX, Config.shiftBoxY, Config.mainBoxX, Config.mainBoxY);
 
         for (List<Polygon> surfs : frameGenerator.getSurfs().values()) {
             for (Polygon surf : surfs) {
                 List<Double> xs = new ArrayList<>();
                 List<Double> ys = new ArrayList<>();
                 for (Point surfPoint : surf.getPoints()) {
-                    xs.add((double) (shiftBoxX + surfPoint.x * multiplayer));
-                    ys.add((double) (shiftBoxY + surfPoint.y * multiplayer));
+                    xs.add((double) (Config.shiftBoxX + surfPoint.getX() * Config.multiplayer));
+                    ys.add((double) (Config.shiftBoxY + surfPoint.getY() * Config.multiplayer));
                 }
                 gc.setFill(Color.GRAY);
                 gc.fillPolygon(xs.stream().mapToDouble(Double::doubleValue).toArray(),
@@ -172,21 +174,21 @@ public class MainCanvas extends Canvas {
 
         if (value == null) {
             return null;
-        } else if (value > colorizeType.maxValue) {
-            return colorSchema.getLast();
-        } else if (value < colorizeType.minValue) {
-            return colorSchema.getFirst();
+        } else if (value > colorizeType.getMaxValue()) {
+            return ColorSchema.INSTANCE.getColorSchema().getLast();
+        } else if (value < colorizeType.getMinValue()) {
+            return ColorSchema.INSTANCE.getColorSchema().getFirst();
         }
-        return colorSchema.get((int) (value * (colorSchema.size() - 1) / (colorizeType.maxValue - colorizeType.minValue)));
+        return ColorSchema.INSTANCE.getColorSchema().get((int) (value * (ColorSchema.INSTANCE.getColorSchema().size() - 1) / (colorizeType.getMaxValue() - colorizeType.getMinValue())));
     }
 
     protected void colorizePoints(FrameGenerator.Frame frame, ColorizeType colorizeType) {
         GraphicsContext gc = this.getGraphicsContext2D();
 
-        float xLoBorder = -shiftBoxX * monitorCellSizeX / zoom;
-        float xHiBorder = (maxBoxX - shiftBoxX) * monitorCellSizeX / zoom;
-        float yLoBorder = -shiftBoxY * monitorCellSizeY / zoom;
-        float yHiBorder = (maxBoxY - shiftBoxY) * monitorCellSizeY / zoom;
+        float xLoBorder = -Config.shiftBoxX * Config.monitorCellSizeX / zoom;
+        float xHiBorder = (MAX_BOX_X - Config.shiftBoxX) * Config.monitorCellSizeX / zoom;
+        float yLoBorder = -Config.shiftBoxY * Config.monitorCellSizeY / zoom;
+        float yHiBorder = (MAX_BOX_Y - Config.shiftBoxY) * Config.monitorCellSizeY / zoom;
 
         for (Number[] point : frame.timeframe.getPoints()) {
             if (point[1].floatValue() < xLoBorder || xHiBorder < point[1].floatValue()) {
@@ -207,7 +209,7 @@ public class MainCanvas extends Canvas {
             }
             if (color != null) {
                 gc.setFill(color);
-                gc.fillOval(shiftBoxX + point[1].floatValue() * multiplayer, shiftBoxY + point[2].floatValue() * multiplayer, 1, 1);
+                gc.fillOval(Config.shiftBoxX + point[1].floatValue() * Config.multiplayer, Config.shiftBoxY + point[2].floatValue() * Config.multiplayer, 1, 1);
             }
         }
     }
@@ -215,10 +217,10 @@ public class MainCanvas extends Canvas {
     protected void colorizeCells(FrameGenerator.Frame frame, ColorizeType colorizeType) {
         GraphicsContext gc = this.getGraphicsContext2D();
 
-        float xLoBorder = -shiftBoxX * monitorCellSizeX / zoom;
-        float xHiBorder = (maxBoxX - shiftBoxX) * monitorCellSizeX / zoom;
-        float yLoBorder = -shiftBoxY * monitorCellSizeY / zoom;
-        float yHiBorder = (maxBoxY - shiftBoxY) * monitorCellSizeY / zoom;
+        float xLoBorder = -Config.shiftBoxX * Config.monitorCellSizeX / zoom;
+        float xHiBorder = (MAX_BOX_X - Config.shiftBoxX) * Config.monitorCellSizeX / zoom;
+        float yLoBorder = -Config.shiftBoxY * Config.monitorCellSizeY / zoom;
+        float yHiBorder = (MAX_BOX_Y - Config.shiftBoxY) * Config.monitorCellSizeY / zoom;
 
         for (Integer cellId : frame.timeframe.getGrid().getCells().keySet()) {
             Parser.GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
@@ -232,10 +234,10 @@ public class MainCanvas extends Canvas {
             Color color = getColorForType(frame, cellId, colorizeType);
             if (color != null) {
                 gc.setFill(color);
-                gc.fillRect(shiftBoxX + gridCell.xLo * multiplayer,
-                        shiftBoxY + gridCell.yLo * multiplayer,
-                        (gridCell.xHi - gridCell.xLo) * multiplayer,
-                        (gridCell.yHi - gridCell.yLo) * multiplayer);
+                gc.fillRect(Config.shiftBoxX + gridCell.xLo * Config.multiplayer,
+                        Config.shiftBoxY + gridCell.yLo * Config.multiplayer,
+                        (gridCell.xHi - gridCell.xLo) * Config.multiplayer,
+                        (gridCell.yHi - gridCell.yLo) * Config.multiplayer);
             }
         }
     }
@@ -258,25 +260,25 @@ public class MainCanvas extends Canvas {
         int denominator = this.getZoom() > 50 ? 50 : this.getZoom() > 10 ? 100 : 200;
         this.changeZoom((float) event.getDeltaY() / denominator);
         if (this.getZoom() == 1) {
-            multiplayer = defaultMultiplayer;
-            mainBoxX = defaultBoxX;
-            mainBoxY = defaultBoxY;
+            Config.multiplayer = Config.defaultMultiplayer;
+            Config.mainBoxX = Config.defaultBoxX;
+            Config.mainBoxY = Config.defaultBoxY;
         } else {
-            multiplayer = (int) (defaultMultiplayer * this.getZoom());
-            mainBoxX = (int) (defaultBoxX * this.getZoom());
-            mainBoxY = (int) (defaultBoxY * this.getZoom());
+            Config.multiplayer = (int) (Config.defaultMultiplayer * this.getZoom());
+            Config.mainBoxX = (int) (Config.defaultBoxX * this.getZoom());
+            Config.mainBoxY = (int) (Config.defaultBoxY * this.getZoom());
         }
 
-        shiftBoxX -= (int) event.getDeltaY();
-        if (shiftBoxX > 0) {
-            shiftBoxX = 0;
+        Config.shiftBoxX -= (int) event.getDeltaY();
+        if (Config.shiftBoxX > 0) {
+            Config.shiftBoxX = 0;
         }
 
-        if (mainBoxX + shiftBoxX > maxBoxX) {
-            mainBoxX = maxBoxX - shiftBoxX;
+        if (Config.mainBoxX + Config.shiftBoxX > MAX_BOX_X) {
+            Config.mainBoxX = MAX_BOX_X - Config.shiftBoxX;
         }
 
-        shiftBoxY = (maxBoxY - mainBoxY) / 2;
+        Config.shiftBoxY = (MAX_BOX_Y - Config.mainBoxY) / 2;
 
         EventBusFactory.getEventBus().post(new DrawEvent(0));
     }
@@ -285,8 +287,8 @@ public class MainCanvas extends Canvas {
         if (mouseEvent.getButton() == MouseButton.PRIMARY) {
             animatedCanvasX = mouseEvent.getSceneX();
             animatedCanvasY = mouseEvent.getSceneY();
-            originalShiftX = shiftBoxX;
-            originalShiftY = shiftBoxY;
+            originalShiftX = Config.shiftBoxX;
+            originalShiftY = Config.shiftBoxY;
         } else if (mouseEvent.getButton() == MouseButton.SECONDARY) {
             showCoordsForRightButton(mouseEvent);
         }
@@ -302,8 +304,8 @@ public class MainCanvas extends Canvas {
         if (mouseEvent.getButton() == MouseButton.PRIMARY) {
             double offsetX = mouseEvent.getSceneX() - animatedCanvasX;
             double offsetY = mouseEvent.getSceneY() - animatedCanvasY;
-            shiftBoxX = originalShiftX + (int) offsetX;
-            shiftBoxY = originalShiftY + (int) offsetY;
+            Config.shiftBoxX = originalShiftX + (int) offsetX;
+            Config.shiftBoxY = originalShiftY + (int) offsetY;
             EventBusFactory.getEventBus().post(new DrawEvent(0));
         }
     };
@@ -312,10 +314,10 @@ public class MainCanvas extends Canvas {
         double canvasX = mouseEvent.getX();
         double canvasY = mouseEvent.getY();
 
-        int surfX = (int) ((canvasX - shiftBoxX) / multiplayer * 1000) / 5 * 5;
+        int surfX = (int) ((canvasX - Config.shiftBoxX) / Config.multiplayer * 1000) / 5 * 5;
         int surfX2 = (int) ((float) surfX / Config.spartaCellSize / 1000);
-        int surfX1 = (int) ((canvasX - shiftBoxX) / multiplayer * 1000) / 5 * 5 + 5;
-        float surfY = (float) ((canvasY - shiftBoxY) / multiplayer * 1000) / 5 * 5 / 1000;
+        int surfX1 = (int) ((canvasX - Config.shiftBoxX) / Config.multiplayer * 1000) / 5 * 5 + 5;
+        float surfY = (float) ((canvasY - Config.shiftBoxY) / Config.multiplayer * 1000) / 5 * 5 / 1000;
         int surfY2 = (int) (surfY / Config.spartaCellSize);
         FrameGenerator.Frame frame = FrameGenerator.getFrameGenerator().getFrame(0);
 
@@ -466,7 +468,7 @@ public class MainCanvas extends Canvas {
                 formattedCellValue,
                 formattedCellSumValue,
                 formattedPerCellSumValue,
-                curColorizeType.units);
+                curColorizeType.getUnits());
 
         GraphicsContext gc = this.getGraphicsContext2D();
 

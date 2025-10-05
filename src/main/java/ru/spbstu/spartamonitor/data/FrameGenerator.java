@@ -1,6 +1,6 @@
 package ru.spbstu.spartamonitor.data;
 
-import ru.spbstu.spartamonitor.config.Config;
+import config.Config;
 import ru.spbstu.spartamonitor.data.models.Polygon;
 import ru.spbstu.spartamonitor.data.models.Timeframe;
 import ru.spbstu.spartamonitor.logger.Logger;
@@ -191,7 +191,7 @@ public class FrameGenerator implements Runnable {
 
                 java.awt.Polygon excludedArea = new java.awt.Polygon();
                 for (ru.spbstu.spartamonitor.data.models.Point point : polygon.getPoints()) {
-                    excludedArea.addPoint((int) (point.x * 1000), (int) (point.y * 1000));
+                    excludedArea.addPoint((int) (point.getX() * 1000), (int) (point.getY() * 1000));
                 }
                 excludedAreas.add(excludedArea);
             }

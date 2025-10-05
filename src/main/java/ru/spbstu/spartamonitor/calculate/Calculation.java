@@ -2,7 +2,7 @@ package ru.spbstu.spartamonitor.calculate;
 
 import ru.spbstu.spartamonitor.data.models.Timeframe;
 
-import java.util.Arrays;
+import java.util.List;
 
 public class Calculation {
 
@@ -16,25 +16,25 @@ public class Calculation {
 
     public static Diameter calculateTargetDiameter(Timeframe timeframe, float percentile) {
         Diameter diameter = new Diameter();
-        Integer[] target = timeframe.getTarget();
+        List<Integer> target = timeframe.getTarget();
         int minValue = 0;
-        int maxvalue = target.length;
+        int maxvalue = target.size();
 
-        if (target.length == 0) {
+        if (target.isEmpty()) {
             return diameter;
         }
 
-        float minY = (1 - percentile) * Arrays.stream(target).max(Integer::compareTo).get();
+        float minY = (1 - percentile) * target.stream().max(Integer::compareTo).get();
 
-        for (int i = 0; i < target.length / 2; i++) {
-            if (target[i] > minY) {
+        for (int i = 0; i < target.size() / 2; i++) {
+            if (target.get(i) > minY) {
                 break;
             } else {
                 minValue = i;
             }
         }
-        for (int i = target.length - 1; i > target.length / 2; i--) {
-            if (target[i] > minY) {
+        for (int i = target.size() - 1; i > target.size() / 2; i--) {
+            if (target.get(i) > minY) {
                 break;
             } else {
                 maxvalue = i;
