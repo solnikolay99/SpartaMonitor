@@ -35,13 +35,13 @@ class Config {
         @JvmField
         var unitSystemCGS = true // система единиц (true - СГС, false - СИ)
         @JvmField
-        var tStep: Double = 5e-8 // временной шаг (в секундах)
+        var tStep: Float = 5e-8.toFloat() // временной шаг (в секундах)
         @JvmField
         var defaultMultiplayer: Int = 200
         @JvmField
         var multiplayer: Int = defaultMultiplayer
         @JvmField
-        var globalParams: Map<String, String> = mutableMapOf()
+        var globalParams: MutableMap<String, String> = mutableMapOf()
         @JvmField
         var surfFiles: MutableList<String> = mutableListOf()
     }

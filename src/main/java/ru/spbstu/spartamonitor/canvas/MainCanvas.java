@@ -12,7 +12,7 @@ import javafx.scene.paint.Color;
 import ru.spbstu.spartamonitor.colorize.ColorSchema;
 import ru.spbstu.spartamonitor.colorize.ColorizeType;
 import ru.spbstu.spartamonitor.data.FrameGenerator;
-import ru.spbstu.spartamonitor.data.Parser;
+import ru.spbstu.spartamonitor.data.models.GridCell;
 import ru.spbstu.spartamonitor.data.models.Point;
 import ru.spbstu.spartamonitor.data.models.Polygon;
 import ru.spbstu.spartamonitor.eventbus.EventBusFactory;
@@ -20,7 +20,6 @@ import ru.spbstu.spartamonitor.events.DrawDensityEvent;
 import ru.spbstu.spartamonitor.events.DrawEvent;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -223,21 +222,21 @@ public class MainCanvas extends Canvas {
         float yHiBorder = (MAX_BOX_Y - Config.shiftBoxY) * Config.monitorCellSizeY / zoom;
 
         for (Integer cellId : frame.timeframe.getGrid().getCells().keySet()) {
-            Parser.GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
-            if (gridCell.xLo < xLoBorder || gridCell.xHi < xLoBorder
-                    || xHiBorder < gridCell.xLo || xHiBorder < gridCell.xHi) {
+            GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
+            if (gridCell.getXLo() < xLoBorder || gridCell.getXHi() < xLoBorder
+                    || xHiBorder < gridCell.getXLo() || xHiBorder < gridCell.getXHi()) {
                 continue;
-            } else if (gridCell.yLo < yLoBorder || gridCell.yHi < yLoBorder
-                    || yHiBorder < gridCell.yLo || yHiBorder < gridCell.yHi) {
+            } else if (gridCell.getYLo() < yLoBorder || gridCell.getYHi() < yLoBorder
+                    || yHiBorder < gridCell.getYLo() || yHiBorder < gridCell.getYHi()) {
                 continue;
             }
             Color color = getColorForType(frame, cellId, colorizeType);
             if (color != null) {
                 gc.setFill(color);
-                gc.fillRect(Config.shiftBoxX + gridCell.xLo * Config.multiplayer,
-                        Config.shiftBoxY + gridCell.yLo * Config.multiplayer,
-                        (gridCell.xHi - gridCell.xLo) * Config.multiplayer,
-                        (gridCell.yHi - gridCell.yLo) * Config.multiplayer);
+                gc.fillRect(Config.shiftBoxX + gridCell.getXLo() * Config.multiplayer,
+                        Config.shiftBoxY + gridCell.getYLo() * Config.multiplayer,
+                        (gridCell.getXHi() - gridCell.getXLo()) * Config.multiplayer,
+                        (gridCell.getYHi() - gridCell.getYLo()) * Config.multiplayer);
             }
         }
     }
@@ -326,74 +325,74 @@ public class MainCanvas extends Canvas {
         float cellValue = 0f;
         float cellSumValue = 0f;
         if (FrameGenerator.inSurfSchema.containsKey(surfX)) {
-            HashMap<Integer, Parser.GridCell> cellIds = FrameGenerator.inSurfSchema.get(surfX);
-            Map<Integer, float[]> frameCells = frame.timeframe.getGrid().getCells();
+            Map<Integer, GridCell> cellIds = FrameGenerator.inSurfSchema.get(surfX);
+            Map<Integer, Float[]> frameCells = frame.timeframe.getGrid().getCells();
 
             countCells = cellIds.size();
-            for (Parser.GridCell gridCell : cellIds.values()) {
-                if (frameCells.containsKey(gridCell.cellId)) {
+            for (GridCell gridCell : cellIds.values()) {
+                if (frameCells.containsKey(gridCell.getCellId())) {
                     if (curColorizeType == ColorizeType.DENSITY_STATIC) {
-                        if (frameCells.get(gridCell.cellId)[0] > 0f) {
-                            cellSumValue += frameCells.get(gridCell.cellId)[0];
+                        if (frameCells.get(gridCell.getCellId())[0] > 0f) {
+                            cellSumValue += frameCells.get(gridCell.getCellId())[0];
                             countCellsWithValue++;
-                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
-                                cellValue = frameCells.get(gridCell.cellId)[0];
+                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
+                                cellValue = frameCells.get(gridCell.getCellId())[0];
                             }
                         }
                     } else if (curColorizeType == ColorizeType.TEMPERATURE) {
-                        if (frameCells.get(gridCell.cellId)[1] > 0f) {
-                            cellSumValue += frameCells.get(gridCell.cellId)[1];
+                        if (frameCells.get(gridCell.getCellId())[1] > 0f) {
+                            cellSumValue += frameCells.get(gridCell.getCellId())[1];
                             countCellsWithValue++;
-                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
-                                cellValue = frameCells.get(gridCell.cellId)[1];
+                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
+                                cellValue = frameCells.get(gridCell.getCellId())[1];
                             }
                         }
                     } else if (curColorizeType == ColorizeType.VELOCITY) {
-                        if (frameCells.get(gridCell.cellId)[2] > 0f) {
-                            cellSumValue += frameCells.get(gridCell.cellId)[2];
+                        if (frameCells.get(gridCell.getCellId())[2] > 0f) {
+                            cellSumValue += frameCells.get(gridCell.getCellId())[2];
                             countCellsWithValue++;
-                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
-                                cellValue = frameCells.get(gridCell.cellId)[2];
+                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
+                                cellValue = frameCells.get(gridCell.getCellId())[2];
                             }
                         }
                     } else if (curColorizeType == ColorizeType.SOUND_VELOCITY) {
-                        if (frameCells.get(gridCell.cellId)[3] > 0f) {
-                            cellSumValue += frameCells.get(gridCell.cellId)[3];
+                        if (frameCells.get(gridCell.getCellId())[3] > 0f) {
+                            cellSumValue += frameCells.get(gridCell.getCellId())[3];
                             countCellsWithValue++;
-                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
-                                cellValue = frameCells.get(gridCell.cellId)[3];
+                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
+                                cellValue = frameCells.get(gridCell.getCellId())[3];
                             }
                         }
                     } else if (curColorizeType == ColorizeType.MACH) {
-                        if (frameCells.get(gridCell.cellId)[4] < Float.MAX_VALUE) {
-                            cellSumValue += frameCells.get(gridCell.cellId)[4];
+                        if (frameCells.get(gridCell.getCellId())[4] < Float.MAX_VALUE) {
+                            cellSumValue += frameCells.get(gridCell.getCellId())[4];
                             countCellsWithValue++;
-                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
-                                cellValue = frameCells.get(gridCell.cellId)[4];
+                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
+                                cellValue = frameCells.get(gridCell.getCellId())[4];
                             }
                         }
                     } else if (curColorizeType == ColorizeType.N_COUNT) {
-                        if (frameCells.get(gridCell.cellId)[5] < Float.MAX_VALUE) {
-                            cellSumValue += frameCells.get(gridCell.cellId)[5];
+                        if (frameCells.get(gridCell.getCellId())[5] < Float.MAX_VALUE) {
+                            cellSumValue += frameCells.get(gridCell.getCellId())[5];
                             countCellsWithValue++;
-                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
-                                cellValue = frameCells.get(gridCell.cellId)[5];
+                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
+                                cellValue = frameCells.get(gridCell.getCellId())[5];
                             }
                         }
                     } else if (curColorizeType == ColorizeType.NRHO) {
-                        if (frameCells.get(gridCell.cellId)[6] < Float.MAX_VALUE) {
-                            cellSumValue += frameCells.get(gridCell.cellId)[6];
+                        if (frameCells.get(gridCell.getCellId())[6] < Float.MAX_VALUE) {
+                            cellSumValue += frameCells.get(gridCell.getCellId())[6];
                             countCellsWithValue++;
-                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
-                                cellValue = frameCells.get(gridCell.cellId)[6];
+                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
+                                cellValue = frameCells.get(gridCell.getCellId())[6];
                             }
                         }
                     } else if (curColorizeType == ColorizeType.DENSITY_DYNAMIC) {
-                        if (frameCells.get(gridCell.cellId)[7] > 0f) {
-                            cellSumValue += frameCells.get(gridCell.cellId)[7];
+                        if (frameCells.get(gridCell.getCellId())[7] > 0f) {
+                            cellSumValue += frameCells.get(gridCell.getCellId())[7];
                             countCellsWithValue++;
-                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
-                                cellValue = frameCells.get(gridCell.cellId)[7];
+                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
+                                cellValue = frameCells.get(gridCell.getCellId())[7];
                             }
                         }
                     }
@@ -403,7 +402,7 @@ public class MainCanvas extends Canvas {
             if (FrameGenerator.gridSchemaRevert.containsKey(surfX2) &&
                     FrameGenerator.gridSchemaRevert.get(surfX2).containsKey(surfY2)) {
                 int cellId = FrameGenerator.gridSchemaRevert.get(surfX2).get(surfY2);
-                Map<Integer, float[]> frameCells = frame.timeframe.getGrid().getCells();
+                Map<Integer, Float[]> frameCells = frame.timeframe.getGrid().getCells();
 
                 if (frameCells.containsKey(cellId)) {
                     if (curColorizeType == ColorizeType.DENSITY_STATIC) {

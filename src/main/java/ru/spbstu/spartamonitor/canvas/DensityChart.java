@@ -10,7 +10,7 @@ import ru.spbstu.spartamonitor.calculate.Calculation;
 import ru.spbstu.spartamonitor.calculate.Diameter;
 import ru.spbstu.spartamonitor.colorize.ColorizeType;
 import ru.spbstu.spartamonitor.data.FrameGenerator;
-import ru.spbstu.spartamonitor.data.Parser;
+import ru.spbstu.spartamonitor.data.models.GridCell;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -76,8 +76,8 @@ public class DensityChart extends LineChart<String, Number> {
     public void showDulovDiffData(FrameGenerator.Frame frame) {
         HashMap<Integer, Float> dulovData = new HashMap<>();
 
-        float minX = FrameGenerator.gridSchema.get(Collections.min(FrameGenerator.dulovsPressureData.keySet())).xLo;
-        float maxX = FrameGenerator.gridSchema.get(Collections.max(FrameGenerator.dulovsPressureData.keySet())).xLo;
+        float minX = FrameGenerator.gridSchema.get(Collections.min(FrameGenerator.dulovsPressureData.keySet())).getXLo();
+        float maxX = FrameGenerator.gridSchema.get(Collections.max(FrameGenerator.dulovsPressureData.keySet())).getXLo();
         if (dulovXLine == null) {
             dulovXLine = (maxX + minX) / 2f;
         }
@@ -86,19 +86,19 @@ public class DensityChart extends LineChart<String, Number> {
 
         if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF || curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
             for (int cellId : frame.timeframe.getGrid().getCells().keySet()) {
-                Parser.GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
-                if (gridCell.xLo < minX || gridCell.xLo > maxX) {
+                GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
+                if (gridCell.getXLo() < minX || gridCell.getXLo() > maxX) {
                     continue;
                 }
-                if (gridCell.yLo <= dulovYLine && dulovYLine < gridCell.yHi) {
-                    dulovData.put(cellId, gridCell.xLo);
+                if (gridCell.getYLo() <= dulovYLine && dulovYLine < gridCell.getXHi()) {
+                    dulovData.put(cellId, gridCell.getXLo());
                 }
             }
         } else if (curColorizeType == ColorizeType.NRHO_DIF) {
             for (int cellId : frame.timeframe.getGrid().getCells().keySet()) {
-                Parser.GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
-                if (gridCell.xLo <= dulovXLine && dulovXLine < gridCell.xHi) {
-                    dulovData.put(cellId, gridCell.yLo);
+                GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
+                if (gridCell.getXLo() <= dulovXLine && dulovXLine < gridCell.getXHi()) {
+                    dulovData.put(cellId, gridCell.getYLo());
                 }
             }
         }
@@ -113,8 +113,8 @@ public class DensityChart extends LineChart<String, Number> {
             Float dulovValue = getDulovData(dulovCells.get(i));
             Float originalValue = getCellValue(frame, dulovCells.get(i));
             System.out.printf("id = %d; xLo = %.4f; yLo = %.4f; dulov = %.3f; actual = %.3f%n", dulovCells.get(i),
-                    FrameGenerator.gridSchema.get(dulovCells.get(i)).xLo,
-                    FrameGenerator.gridSchema.get(dulovCells.get(i)).yLo,
+                    FrameGenerator.gridSchema.get(dulovCells.get(i)).getXLo(),
+                    FrameGenerator.gridSchema.get(dulovCells.get(i)).getYLo(),
                     dulovValue,
                     originalValue);
             series1.getData().add(new Data<>(String.valueOf(dulovData.get(dulovCells.get(i))), Objects.requireNonNullElse(dulovValue, 0)));

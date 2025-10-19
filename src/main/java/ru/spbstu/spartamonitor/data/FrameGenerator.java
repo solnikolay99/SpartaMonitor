@@ -1,6 +1,7 @@
 package ru.spbstu.spartamonitor.data;
 
 import config.Config;
+import ru.spbstu.spartamonitor.data.models.GridCell;
 import ru.spbstu.spartamonitor.data.models.Polygon;
 import ru.spbstu.spartamonitor.data.models.Timeframe;
 import ru.spbstu.spartamonitor.logger.Logger;
@@ -8,7 +9,6 @@ import ru.spbstu.spartamonitor.logger.Logger;
 import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
@@ -29,11 +29,11 @@ public class FrameGenerator implements Runnable {
     public List<Timeframe> timeframes = Collections.synchronizedList(new ArrayList<>());
     private static int curFrame = 0;
     public HashMap<String, List<Polygon>> surfs = new HashMap<>();
-    public static HashMap<Integer, Parser.GridCell> gridSchema = new HashMap<>();
-    public static HashMap<Integer, HashMap<Integer, Parser.GridCell>> inSurfSchema = new HashMap<>();
-    public static HashMap<Integer, HashMap<Integer, Integer>> gridSchemaRevert = new HashMap<>();
-    public static HashMap<Integer, Float> dulovsPressureData = new HashMap<>();
-    public static HashMap<Integer, Float> dulovsNConcentrationData = new HashMap<>();
+    public static Map<Integer, GridCell> gridSchema = new HashMap<>();
+    public static Map<Integer, Map<Integer, GridCell>> inSurfSchema = new HashMap<>();
+    public static Map<Integer, Map<Integer, Integer>> gridSchemaRevert = new HashMap<>();
+    public static Map<Integer, Float> dulovsPressureData = new HashMap<>();
+    public static Map<Integer, Float> dulovsNConcentrationData = new HashMap<>();
 
     private static final FrameGenerator frameGenerator = new FrameGenerator();
 
@@ -41,7 +41,7 @@ public class FrameGenerator implements Runnable {
         return frameGenerator;
     }
 
-    public void setDumpDir(String dumpDir) throws IOException {
+    public void setDumpDir(String dumpDir) {
         this.parser.setDumpDir(dumpDir);
     }
 
@@ -130,28 +130,28 @@ public class FrameGenerator implements Runnable {
         return surfs;
     }
 
-    public void loadInFile() throws IOException {
+    public void loadInFile() {
         curFrame = 0;
         this.parser.parsInFile(this.parser.getInFile());
     }
 
-    public void loadSurfs(Path rootDir) throws IOException {
+    public void loadSurfs(Path rootDir) {
         surfs = new HashMap<>();
         for (String filePath : Config.surfFiles) {
-            ArrayList<Polygon> polygons = this.parser.parsSurfFile(Path.of(rootDir.toString(), filePath));
+            List<Polygon> polygons = this.parser.parsSurfFile(Path.of(rootDir.toString(), filePath));
             if (!polygons.isEmpty()) {
                 surfs.put(filePath, polygons);
             }
         }
     }
 
-    public void loadGrid(Path filePath) throws IOException {
+    public void loadGrid(Path filePath) {
         loadGridSchema(filePath);
         excludeOutSurfGridCells();
         revertGridSchema();
     }
 
-    protected void loadGridSchema(Path rootDir) throws IOException {
+    protected void loadGridSchema(Path rootDir) {
         gridSchema = this.parser.parsGridSchema(Path.of(rootDir.toString(), "cells.txt"));
     }
 
@@ -159,7 +159,7 @@ public class FrameGenerator implements Runnable {
         gridSchemaRevert = this.parser.revertGridSchema(gridSchema);
     }
 
-    public void loadDulovsData(Path rootDir) throws IOException {
+    public void loadDulovsData(Path rootDir) {
         Path xFileName = Path.of(rootDir.toString(), "dulov/xx_Dulov_check.txt");
         Path yFileName = Path.of(rootDir.toString(), "dulov/yy_Dulov_check.txt");
         dulovsPressureData = this.parser.parseDulovsData(Path.of(rootDir.toString(), "dulov/Dulov_density_check.txt"),
@@ -199,17 +199,17 @@ public class FrameGenerator implements Runnable {
         }
 
         for (Integer cellId : gridSchema.keySet()) {
-            Parser.GridCell gridCell = gridSchema.get(cellId);
+            GridCell gridCell = gridSchema.get(cellId);
             for (float[] borders : surfBorders) {
-                if (gridCell.xLo >= borders[0] && gridCell.xLo <= borders[2]
-                        && gridCell.yLo >= borders[1] && gridCell.yLo <= borders[3]
-                        && gridCell.xHi >= borders[0] && gridCell.xHi <= borders[2]
-                        && gridCell.yHi >= borders[1] && gridCell.yHi <= borders[3]) {
+                if (gridCell.getXLo() >= borders[0] && gridCell.getXLo() <= borders[2]
+                        && gridCell.getYLo() >= borders[1] && gridCell.getYLo() <= borders[3]
+                        && gridCell.getXHi() >= borders[0] && gridCell.getXHi() <= borders[2]
+                        && gridCell.getYHi() >= borders[1] && gridCell.getYHi() <= borders[3]) {
 
-                    Rectangle gridPolygon = new Rectangle((int) (gridCell.xLo * 1000),
-                            (int) (gridCell.yLo * 1000),
-                            (int) ((gridCell.xHi - gridCell.xLo) * 1000),
-                            (int) ((gridCell.yHi - gridCell.yLo) * 1000));
+                    Rectangle gridPolygon = new Rectangle((int) (gridCell.getXLo() * 1000),
+                            (int) (gridCell.getYLo() * 1000),
+                            (int) ((gridCell.getXHi() - gridCell.getXLo()) * 1000),
+                            (int) ((gridCell.getYHi() - gridCell.getYLo()) * 1000));
 
                     boolean flgGridPolygonInside = false;
                     for (java.awt.Polygon excludedArea : excludedAreas) {
@@ -223,10 +223,10 @@ public class FrameGenerator implements Runnable {
                         continue;
                     }
 
-                    if (!inSurfSchema.containsKey((int) (gridCell.xLo * 1000))) {
-                        inSurfSchema.put((int) (gridCell.xLo * 1000), new HashMap<>());
+                    if (!inSurfSchema.containsKey((int) (gridCell.getXLo() * 1000))) {
+                        inSurfSchema.put((int) (gridCell.getXLo() * 1000), new HashMap<>());
                     }
-                    inSurfSchema.get((int) (gridCell.xLo * 1000)).put(cellId, gridSchema.get(cellId));
+                    inSurfSchema.get((int) (gridCell.getXLo() * 1000)).put(cellId, gridSchema.get(cellId));
                 }
             }
         }
