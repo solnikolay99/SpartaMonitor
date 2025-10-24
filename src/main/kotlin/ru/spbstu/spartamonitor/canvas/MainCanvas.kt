@@ -1,398 +1,418 @@
-package ru.spbstu.spartamonitor.canvas;
+package ru.spbstu.spartamonitor.canvas
 
-import config.Config;
-import javafx.event.EventHandler;
-import javafx.fxml.FXML;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
-import javafx.scene.paint.Color;
-import ru.spbstu.spartamonitor.colorize.ColorSchema;
-import ru.spbstu.spartamonitor.colorize.ColorizeType;
-import ru.spbstu.spartamonitor.data.FrameGenerator;
-import ru.spbstu.spartamonitor.data.models.GridCell;
-import ru.spbstu.spartamonitor.data.models.Point;
-import ru.spbstu.spartamonitor.data.models.Polygon;
-import ru.spbstu.spartamonitor.eventbus.EventBusFactory;
-import ru.spbstu.spartamonitor.events.DrawDensityEvent;
-import ru.spbstu.spartamonitor.events.DrawEvent;
+import config.Config
+import config.MAX_BOX_X
+import config.MAX_BOX_Y
+import javafx.event.EventHandler
+import javafx.fxml.FXML
+import javafx.scene.canvas.Canvas
+import javafx.scene.input.MouseButton
+import javafx.scene.input.MouseEvent
+import javafx.scene.input.ScrollEvent
+import javafx.scene.paint.Color
+import ru.spbstu.spartamonitor.colorize.ColorSchema.colorSchema
+import ru.spbstu.spartamonitor.colorize.ColorizeType
+import ru.spbstu.spartamonitor.data.FrameGenerator
+import ru.spbstu.spartamonitor.data.models.GridCell
+import ru.spbstu.spartamonitor.eventbus.EventBusFactory
+import ru.spbstu.spartamonitor.events.DrawDensityEvent
+import ru.spbstu.spartamonitor.events.DrawEvent
+import kotlin.math.abs
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+class MainCanvas : Canvas() {
+    private var zoom: Float = 1f
 
-import static config.Config.shapeX;
-import static config.ConfigKt.MAX_BOX_X;
-import static config.ConfigKt.MAX_BOX_Y;
+    private var animatedCanvasX = 0.0
+    private var animatedCanvasY = 0.0
+    private var originalShiftX = 0
+    private var originalShiftY = 0
 
-public class MainCanvas extends Canvas {
+    private var curColorizeType = ColorizeType.DENSITY_STATIC
 
-    private float zoom = 1f;
+    fun drawIteration(
+        frameGenerator: FrameGenerator,
+        frame: FrameGenerator.Frame,
+        colorizeType: ColorizeType,
+        flgDrawByPointsOrCells: Boolean,
+        title: String
+    ) {
+        val gc = this.getGraphicsContext2D()
+        gc.isImageSmoothing = true
 
-    private double animatedCanvasX = 0;
-    private double animatedCanvasY = 0;
-    private int originalShiftX = 0;
-    private int originalShiftY = 0;
+        drawMask(frameGenerator)
 
-    private ColorizeType curColorizeType = ColorizeType.DENSITY_STATIC;
-
-    public MainCanvas() {
-        this.setOnScroll(this::onZooming);
-        this.setOnMousePressed(canvasOnMousePressedEventHandler);
-        this.setOnMouseReleased(canvasOnMouseReleasedEventHandler);
-        this.setOnMouseDragged(canvasOnMouseDraggedEventHandler);
-    }
-
-    public void drawIteration(FrameGenerator frameGenerator,
-                              FrameGenerator.Frame frame,
-                              ColorizeType colorizeType,
-                              boolean flgDrawByPointsOrCells,
-                              String title) {
-        GraphicsContext gc = this.getGraphicsContext2D();
-        gc.setImageSmoothing(true);
-
-        drawMask(frameGenerator);
-
-        curColorizeType = colorizeType;
+        curColorizeType = colorizeType
         if (flgDrawByPointsOrCells) {
-            colorizePoints(frame, colorizeType);
+            colorizePoints(frame, colorizeType)
         } else {
-            colorizeCells(frame, colorizeType);
+            colorizeCells(frame, colorizeType)
         }
 
-        drawTitle(title);
+        drawTitle(title)
     }
 
-    protected void drawAxes() {
-        GraphicsContext gc = this.getGraphicsContext2D();
-        gc.setFill(Color.GRAY);
+    private fun drawAxes() {
+        val gc = this.getGraphicsContext2D()
+        gc.fill = Color.GRAY
 
-        for (int i = 0; i <= Config.shapeX; i++) {
-            gc.fillRect(i * Config.multiplayer - 1, Config.shiftBoxY + Config.mainBoxY - 6, 1, 6);
+        run {
+            var i = 0
+            while (i <= Config.shapeX) {
+                gc.fillRect(
+                    (i * Config.multiplayer - 1).toDouble(),
+                    (Config.shiftBoxY + Config.mainBoxY - 6).toDouble(),
+                    1.0,
+                    6.0
+                )
+                i++
+            }
         }
-        for (int i = 0; i <= shapeX; i += 5) {
-            gc.fillRect(i * Config.multiplayer - 1, Config.shiftBoxY + Config.mainBoxY - 10, 1, 10);
+        var i = 0
+        while (i <= Config.shapeX) {
+            gc.fillRect(
+                (i * Config.multiplayer - 1).toDouble(),
+                (Config.shiftBoxY + Config.mainBoxY - 10).toDouble(),
+                1.0,
+                10.0
+            )
+            i += 5
         }
     }
 
-    protected void drawZoom() {
-        GraphicsContext gc = this.getGraphicsContext2D();
+    private fun drawZoom() {
+        val gc = this.getGraphicsContext2D()
 
-        gc.setFill(Color.LIGHTGRAY);
-        gc.fillRect(0, 0, 45, 22);
-        gc.setFill(Color.WHITE);
-        gc.fillText(String.format("%.2f X", zoom), 5, 15);
+        gc.fill = Color.LIGHTGRAY
+        gc.fillRect(0.0, 0.0, 45.0, 22.0)
+        gc.fill = Color.WHITE
+        gc.fillText(String.format("%.2f X", zoom), 5.0, 15.0)
     }
 
-    protected void drawTitle(String title) {
-        GraphicsContext gc = this.getGraphicsContext2D();
+    private fun drawTitle(title: String) {
+        val gc = this.getGraphicsContext2D()
 
-        int middle = (int) gc.getCanvas().getWidth() / 2;
-        gc.setFill(Color.LIGHTGRAY);
-        gc.fillRect(middle - 50, 0, 100, 22);
-        gc.setFill(Color.WHITE);
-        gc.fillText(title, middle - ((float) title.length() * 5 / 2), 15);
+        val middle = gc.canvas.width.toInt() / 2
+        gc.fill = Color.LIGHTGRAY
+        gc.fillRect((middle - 50).toDouble(), 0.0, 100.0, 22.0)
+        gc.fill = Color.WHITE
+        gc.fillText(title, (middle - (title.length.toFloat() * 5 / 2)).toDouble(), 15.0)
     }
 
-    public void drawMask(FrameGenerator frameGenerator) {
-        GraphicsContext gc = this.getGraphicsContext2D();
-        gc.setImageSmoothing(true);
-        gc.clearRect(0, 0, this.getWidth(), this.getHeight());
-        gc.setFill(Color.AZURE);
-        gc.fillRect(Config.shiftBoxX, Config.shiftBoxY, Config.mainBoxX, Config.mainBoxY);
+    fun drawMask(frameGenerator: FrameGenerator) {
+        val gc = this.getGraphicsContext2D()
+        gc.isImageSmoothing = true
+        gc.clearRect(0.0, 0.0, this.width, this.height)
+        gc.fill = Color.AZURE
+        gc.fillRect(
+            Config.shiftBoxX.toDouble(),
+            Config.shiftBoxY.toDouble(),
+            Config.mainBoxX.toDouble(),
+            Config.mainBoxY.toDouble()
+        )
 
-        for (List<Polygon> surfs : frameGenerator.getSurfs().values()) {
-            for (Polygon surf : surfs) {
-                List<Double> xs = new ArrayList<>();
-                List<Double> ys = new ArrayList<>();
-                for (Point surfPoint : surf.getPoints()) {
-                    xs.add((double) (Config.shiftBoxX + surfPoint.getX() * Config.multiplayer));
-                    ys.add((double) (Config.shiftBoxY + surfPoint.getY() * Config.multiplayer));
+        for (surfs in frameGenerator.surfs.values) {
+            for (surf in surfs) {
+                val xs: MutableList<Double> = mutableListOf()
+                val ys: MutableList<Double> = mutableListOf()
+                for (surfPoint in surf.points) {
+                    xs.add((Config.shiftBoxX + surfPoint.x * Config.multiplayer).toDouble())
+                    ys.add((Config.shiftBoxY + surfPoint.y * Config.multiplayer).toDouble())
                 }
-                gc.setFill(Color.GRAY);
-                gc.fillPolygon(xs.stream().mapToDouble(Double::doubleValue).toArray(),
-                        ys.stream().mapToDouble(Double::doubleValue).toArray(),
-                        xs.size());
+                gc.fill = Color.GRAY
+                gc.fillPolygon(
+                    xs.toDoubleArray(),
+                    ys.toDoubleArray(),
+                    xs.size
+                )
             }
         }
 
-        drawAxes();
-        drawZoom();
+        drawAxes()
+        drawZoom()
     }
 
-    protected Float getDiffByDulov(FrameGenerator.Frame frame, int cellId) {
+    private fun getDiffByDulov(frame: FrameGenerator.Frame, cellId: Int): Float? {
         if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF) {
             if (FrameGenerator.dulovsPressureData.containsKey(cellId)) {
-                float origCellValue = frame.getTimeframe().getGrid().getCells().get(cellId)[0];
-                float dulovsValue = FrameGenerator.dulovsPressureData.get(cellId);
-                return Math.abs(origCellValue / dulovsValue * 100);
+                val origCellValue = frame.timeframe!!.grid.cells[cellId]!![0]
+                val dulovsValue: Float = FrameGenerator.dulovsPressureData[cellId]!!
+                return abs(origCellValue / dulovsValue * 100)
             }
         } else if (curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
             if (FrameGenerator.dulovsPressureData.containsKey(cellId)) {
-                float origCellValue = frame.getTimeframe().getGrid().getCells().get(cellId)[7];
-                float dulovsValue = FrameGenerator.dulovsPressureData.get(cellId);
-                return Math.abs(origCellValue / dulovsValue * 100);
+                val origCellValue = frame.timeframe!!.grid.cells[cellId]!![7]
+                val dulovsValue: Float = FrameGenerator.dulovsPressureData[cellId]!!
+                return abs(origCellValue / dulovsValue * 100)
             }
         } else if (curColorizeType == ColorizeType.NRHO_DIF) {
             if (FrameGenerator.dulovsNConcentrationData.containsKey(cellId)) {
-                float origCellValue = frame.getTimeframe().getGrid().getCells().get(cellId)[6];
-                float dulovsValue = FrameGenerator.dulovsNConcentrationData.get(cellId);
-                return Math.abs(origCellValue / dulovsValue * 100);
+                val origCellValue = frame.timeframe!!.grid.cells[cellId]!![6]
+                val dulovsValue: Float = FrameGenerator.dulovsNConcentrationData[cellId]!!
+                return abs(origCellValue / dulovsValue * 100)
             }
         }
-        return null;
+        return null
     }
 
-    protected Float getDulovData(int cellId) {
+    private fun getDulovData(cellId: Int): Float? {
         if (curColorizeType == ColorizeType.NRHO_DULOV) {
             if (FrameGenerator.dulovsNConcentrationData.containsKey(cellId)) {
-                return FrameGenerator.dulovsNConcentrationData.get(cellId);
+                return FrameGenerator.dulovsNConcentrationData[cellId]
             }
         }
-        return null;
+        return null
     }
 
-    protected Color getColorForType(FrameGenerator.Frame frame, int cellId, ColorizeType colorizeType) {
-        assert colorizeType != null;
+    private fun getColorForType(frame: FrameGenerator.Frame, cellId: Int, colorizeType: ColorizeType): Color? {
+        val value = when (colorizeType) {
+            ColorizeType.DENSITY_STATIC -> frame.timeframe!!.grid.cells[cellId]!![0]
+            ColorizeType.TEMPERATURE -> frame.timeframe!!.grid.cells[cellId]!![1]
+            ColorizeType.VELOCITY -> frame.timeframe!!.grid.cells[cellId]!![2]
+            ColorizeType.SOUND_VELOCITY -> frame.timeframe!!.grid.cells[cellId]!![3]
+            ColorizeType.MACH -> frame.timeframe!!.grid.cells[cellId]!![4]
+            ColorizeType.BIND -> frame.timeframe!!.grid.procs[cellId]!!.toFloat()
+            ColorizeType.N_COUNT -> frame.timeframe!!.grid.cells[cellId]!![5]
+            ColorizeType.NRHO -> frame.timeframe!!.grid.cells[cellId]!![6]
+            ColorizeType.DENSITY_STATIC_DIF,
+            ColorizeType.DENSITY_DYNAMIC_DIF,
+            ColorizeType.NRHO_DIF -> getDiffByDulov(
+                frame,
+                cellId
+            )
 
-        Float value = switch (colorizeType) {
-            case DENSITY_STATIC -> frame.getTimeframe().getGrid().getCells().get(cellId)[0];
-            case TEMPERATURE -> frame.getTimeframe().getGrid().getCells().get(cellId)[1];
-            case VELOCITY -> frame.getTimeframe().getGrid().getCells().get(cellId)[2];
-            case SOUND_VELOCITY -> frame.getTimeframe().getGrid().getCells().get(cellId)[3];
-            case MACH -> frame.getTimeframe().getGrid().getCells().get(cellId)[4];
-            case BIND -> (float) frame.getTimeframe().getGrid().getProcs().get(cellId);
-            case N_COUNT -> frame.getTimeframe().getGrid().getCells().get(cellId)[5];
-            case NRHO -> frame.getTimeframe().getGrid().getCells().get(cellId)[6];
-            case DENSITY_STATIC_DIF, DENSITY_DYNAMIC_DIF, NRHO_DIF -> getDiffByDulov(frame, cellId);
-            case NRHO_DULOV -> getDulovData(cellId);
-            case DENSITY_DYNAMIC -> frame.getTimeframe().getGrid().getCells().get(cellId)[7];
-        };
+            ColorizeType.NRHO_DULOV -> getDulovData(cellId)
+            ColorizeType.DENSITY_DYNAMIC -> frame.timeframe!!.grid.cells[cellId]!![7]
+        }
 
         if (value == null) {
-            return null;
-        } else if (value > colorizeType.getMaxValue()) {
-            return ColorSchema.INSTANCE.getColorSchema().getLast();
-        } else if (value < colorizeType.getMinValue()) {
-            return ColorSchema.INSTANCE.getColorSchema().getFirst();
+            return null
+        } else if (value > colorizeType.maxValue) {
+            return colorSchema.last()
+        } else if (value < colorizeType.minValue) {
+            return colorSchema[0]
         }
-        return ColorSchema.INSTANCE.getColorSchema().get((int) (value * (ColorSchema.INSTANCE.getColorSchema().size() - 1) / (colorizeType.getMaxValue() - colorizeType.getMinValue())));
+        return colorSchema[(value * (colorSchema.size - 1) / (colorizeType.maxValue - colorizeType.minValue)).toInt()]
     }
 
-    protected void colorizePoints(FrameGenerator.Frame frame, ColorizeType colorizeType) {
-        GraphicsContext gc = this.getGraphicsContext2D();
+    private fun colorizePoints(frame: FrameGenerator.Frame, colorizeType: ColorizeType) {
+        val gc = this.getGraphicsContext2D()
 
-        float xLoBorder = -Config.shiftBoxX * Config.monitorCellSizeX / zoom;
-        float xHiBorder = (MAX_BOX_X - Config.shiftBoxX) * Config.monitorCellSizeX / zoom;
-        float yLoBorder = -Config.shiftBoxY * Config.monitorCellSizeY / zoom;
-        float yHiBorder = (MAX_BOX_Y - Config.shiftBoxY) * Config.monitorCellSizeY / zoom;
+        val xLoBorder = -Config.shiftBoxX * Config.monitorCellSizeX / zoom
+        val xHiBorder: Float = (MAX_BOX_X - Config.shiftBoxX) * Config.monitorCellSizeX / zoom
+        val yLoBorder = -Config.shiftBoxY * Config.monitorCellSizeY / zoom
+        val yHiBorder: Float = (MAX_BOX_Y - Config.shiftBoxY) * Config.monitorCellSizeY / zoom
 
-        for (Number[] point : frame.getTimeframe().getPoints()) {
-            if (point[1].floatValue() < xLoBorder || xHiBorder < point[1].floatValue()) {
-                continue;
-            } else if (point[2].floatValue() < yLoBorder || yHiBorder < point[2].floatValue()) {
-                continue;
+        for (point in frame.timeframe!!.points) {
+            if (point[1].toFloat() !in xLoBorder..xHiBorder) {
+                continue
+            } else if (point[2].toFloat() !in yLoBorder..yHiBorder) {
+                continue
             }
-            Color color;
-            try {
-                int cellId = point[3].intValue();
-                if (!frame.getTimeframe().getGrid().getCells().containsKey(cellId)) {
-                    color = Color.BLACK;
+            val color = try {
+                val cellId = point[3].toInt()
+                if (!frame.timeframe!!.grid.cells.containsKey(cellId)) {
+                    Color.BLACK
                 } else {
-                    color = getColorForType(frame, cellId, colorizeType);
+                    getColorForType(frame, cellId, colorizeType)
                 }
-            } catch (Exception ignore) {
-                color = Color.YELLOW;
+            } catch (_: Exception) {
+                Color.YELLOW
             }
             if (color != null) {
-                gc.setFill(color);
-                gc.fillOval(Config.shiftBoxX + point[1].floatValue() * Config.multiplayer, Config.shiftBoxY + point[2].floatValue() * Config.multiplayer, 1, 1);
+                gc.fill = color
+                gc.fillOval(
+                    (Config.shiftBoxX + point[1].toFloat() * Config.multiplayer).toDouble(),
+                    (Config.shiftBoxY + point[2].toFloat() * Config.multiplayer).toDouble(),
+                    1.0,
+                    1.0
+                )
             }
         }
     }
 
-    protected void colorizeCells(FrameGenerator.Frame frame, ColorizeType colorizeType) {
-        GraphicsContext gc = this.getGraphicsContext2D();
+    private fun colorizeCells(frame: FrameGenerator.Frame, colorizeType: ColorizeType) {
+        val gc = this.getGraphicsContext2D()
 
-        float xLoBorder = -Config.shiftBoxX * Config.monitorCellSizeX / zoom;
-        float xHiBorder = (MAX_BOX_X - Config.shiftBoxX) * Config.monitorCellSizeX / zoom;
-        float yLoBorder = -Config.shiftBoxY * Config.monitorCellSizeY / zoom;
-        float yHiBorder = (MAX_BOX_Y - Config.shiftBoxY) * Config.monitorCellSizeY / zoom;
+        val xLoBorder = -Config.shiftBoxX * Config.monitorCellSizeX / zoom
+        val xHiBorder: Float = (MAX_BOX_X - Config.shiftBoxX) * Config.monitorCellSizeX / zoom
+        val yLoBorder = -Config.shiftBoxY * Config.monitorCellSizeY / zoom
+        val yHiBorder: Float = (MAX_BOX_Y - Config.shiftBoxY) * Config.monitorCellSizeY / zoom
 
-        for (Integer cellId : frame.getTimeframe().getGrid().getCells().keySet()) {
-            GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
-            if (gridCell.getXLo() < xLoBorder || gridCell.getXHi() < xLoBorder
-                    || xHiBorder < gridCell.getXLo() || xHiBorder < gridCell.getXHi()) {
-                continue;
-            } else if (gridCell.getYLo() < yLoBorder || gridCell.getYHi() < yLoBorder
-                    || yHiBorder < gridCell.getYLo() || yHiBorder < gridCell.getYHi()) {
-                continue;
+        for (cellId in frame.timeframe!!.grid.cells.keys) {
+            val gridCell: GridCell = FrameGenerator.gridSchema[cellId]!!
+            if (gridCell.xLo < xLoBorder || gridCell.xHi < xLoBorder || xHiBorder < gridCell.xLo || xHiBorder < gridCell.xHi) {
+                continue
+            } else if (gridCell.yLo < yLoBorder || gridCell.yHi < yLoBorder || yHiBorder < gridCell.yLo || yHiBorder < gridCell.yHi) {
+                continue
             }
-            Color color = getColorForType(frame, cellId, colorizeType);
+            val color = getColorForType(frame, cellId, colorizeType)
             if (color != null) {
-                gc.setFill(color);
-                gc.fillRect(Config.shiftBoxX + gridCell.getXLo() * Config.multiplayer,
-                        Config.shiftBoxY + gridCell.getYLo() * Config.multiplayer,
-                        (gridCell.getXHi() - gridCell.getXLo()) * Config.multiplayer,
-                        (gridCell.getYHi() - gridCell.getYLo()) * Config.multiplayer);
+                gc.fill = color
+                gc.fillRect(
+                    (Config.shiftBoxX + gridCell.xLo * Config.multiplayer).toDouble(),
+                    (Config.shiftBoxY + gridCell.yLo * Config.multiplayer).toDouble(),
+                    ((gridCell.xHi - gridCell.xLo) * Config.multiplayer).toDouble(),
+                    ((gridCell.yHi - gridCell.yLo) * Config.multiplayer).toDouble()
+                )
             }
         }
     }
 
-    public float getZoom() {
-        return zoom;
-    }
-
-    public void changeZoom(float delta) {
-        this.zoom += delta;
+    fun changeZoom(delta: Float) {
+        this.zoom += delta
         if (this.zoom < 1) {
-            this.zoom = 1;
+            this.zoom = 1f
         } else if (this.zoom > 100) {
-            this.zoom = 100;
+            this.zoom = 100f
         }
     }
 
     @FXML
-    protected void onZooming(ScrollEvent event) {
-        int denominator = this.getZoom() > 50 ? 50 : this.getZoom() > 10 ? 100 : 200;
-        this.changeZoom((float) event.getDeltaY() / denominator);
-        if (this.getZoom() == 1) {
-            Config.multiplayer = Config.defaultMultiplayer;
-            Config.mainBoxX = Config.defaultBoxX;
-            Config.mainBoxY = Config.defaultBoxY;
+    private fun onZooming(event: ScrollEvent) {
+        val denominator = if (this.zoom > 50) 50 else if (this.zoom > 10) 100 else 200
+        this.changeZoom(event.deltaY.toFloat() / denominator)
+        if (this.zoom == 1f) {
+            Config.multiplayer = Config.defaultMultiplayer
+            Config.mainBoxX = Config.defaultBoxX
+            Config.mainBoxY = Config.defaultBoxY
         } else {
-            Config.multiplayer = (int) (Config.defaultMultiplayer * this.getZoom());
-            Config.mainBoxX = (int) (Config.defaultBoxX * this.getZoom());
-            Config.mainBoxY = (int) (Config.defaultBoxY * this.getZoom());
+            Config.multiplayer = (Config.defaultMultiplayer * this.zoom).toInt()
+            Config.mainBoxX = (Config.defaultBoxX * this.zoom).toInt()
+            Config.mainBoxY = (Config.defaultBoxY * this.zoom).toInt()
         }
 
-        Config.shiftBoxX -= (int) event.getDeltaY();
+        Config.shiftBoxX -= event.deltaY.toInt()
         if (Config.shiftBoxX > 0) {
-            Config.shiftBoxX = 0;
+            Config.shiftBoxX = 0
         }
 
         if (Config.mainBoxX + Config.shiftBoxX > MAX_BOX_X) {
-            Config.mainBoxX = MAX_BOX_X - Config.shiftBoxX;
+            Config.mainBoxX = MAX_BOX_X - Config.shiftBoxX
         }
 
-        Config.shiftBoxY = (MAX_BOX_Y - Config.mainBoxY) / 2;
+        Config.shiftBoxY = (MAX_BOX_Y - Config.mainBoxY) / 2
 
-        EventBusFactory.getEventBus().post(new DrawEvent(0));
+        EventBusFactory.getEventBus().post(DrawEvent(0))
     }
 
-    EventHandler<MouseEvent> canvasOnMousePressedEventHandler = mouseEvent -> {
-        if (mouseEvent.getButton() == MouseButton.PRIMARY) {
-            animatedCanvasX = mouseEvent.getSceneX();
-            animatedCanvasY = mouseEvent.getSceneY();
-            originalShiftX = Config.shiftBoxX;
-            originalShiftY = Config.shiftBoxY;
-        } else if (mouseEvent.getButton() == MouseButton.SECONDARY) {
-            showCoordsForRightButton(mouseEvent);
+    var canvasOnMousePressedEventHandler: EventHandler<MouseEvent> = EventHandler { mouseEvent ->
+        if (mouseEvent.button == MouseButton.PRIMARY) {
+            animatedCanvasX = mouseEvent.sceneX
+            animatedCanvasY = mouseEvent.sceneY
+            originalShiftX = Config.shiftBoxX
+            originalShiftY = Config.shiftBoxY
+        } else if (mouseEvent.button == MouseButton.SECONDARY) {
+            showCoordsForRightButton(mouseEvent)
         }
-    };
+    }
 
-    EventHandler<MouseEvent> canvasOnMouseReleasedEventHandler = mouseEvent -> {
-        if (mouseEvent.getButton() == MouseButton.SECONDARY) {
-            EventBusFactory.getEventBus().post(new DrawEvent(0));
+    var canvasOnMouseReleasedEventHandler: EventHandler<MouseEvent> = EventHandler { mouseEvent ->
+        if (mouseEvent.button == MouseButton.SECONDARY) {
+            EventBusFactory.getEventBus().post(DrawEvent(0))
         }
-    };
+    }
 
-    EventHandler<MouseEvent> canvasOnMouseDraggedEventHandler = mouseEvent -> {
-        if (mouseEvent.getButton() == MouseButton.PRIMARY) {
-            double offsetX = mouseEvent.getSceneX() - animatedCanvasX;
-            double offsetY = mouseEvent.getSceneY() - animatedCanvasY;
-            Config.shiftBoxX = originalShiftX + (int) offsetX;
-            Config.shiftBoxY = originalShiftY + (int) offsetY;
-            EventBusFactory.getEventBus().post(new DrawEvent(0));
+    var canvasOnMouseDraggedEventHandler: EventHandler<MouseEvent> = EventHandler { mouseEvent ->
+        if (mouseEvent.button == MouseButton.PRIMARY) {
+            val offsetX = mouseEvent.sceneX - animatedCanvasX
+            val offsetY = mouseEvent.sceneY - animatedCanvasY
+            Config.shiftBoxX = originalShiftX + offsetX.toInt()
+            Config.shiftBoxY = originalShiftY + offsetY.toInt()
+            EventBusFactory.getEventBus().post(DrawEvent(0))
         }
-    };
+    }
 
-    private void showCoordsForRightButton(MouseEvent mouseEvent) {
-        double canvasX = mouseEvent.getX();
-        double canvasY = mouseEvent.getY();
+    init {
+        this.onScroll = EventHandler { event: ScrollEvent -> this.onZooming(event) }
+        this.onMousePressed = canvasOnMousePressedEventHandler
+        this.onMouseReleased = canvasOnMouseReleasedEventHandler
+        this.onMouseDragged = canvasOnMouseDraggedEventHandler
+    }
 
-        int surfX = (int) ((canvasX - Config.shiftBoxX) / Config.multiplayer * 1000) / 5 * 5;
-        int surfX2 = (int) ((float) surfX / Config.spartaCellSize / 1000);
-        int surfX1 = (int) ((canvasX - Config.shiftBoxX) / Config.multiplayer * 1000) / 5 * 5 + 5;
-        float surfY = (float) ((canvasY - Config.shiftBoxY) / Config.multiplayer * 1000) / 5 * 5 / 1000;
-        int surfY2 = (int) (surfY / Config.spartaCellSize);
-        FrameGenerator.Frame frame = FrameGenerator.frameGenerator.getFrame(0);
+    private fun showCoordsForRightButton(mouseEvent: MouseEvent) {
+        val canvasX = mouseEvent.x
+        val canvasY = mouseEvent.y
 
-        int countCells = 0;
-        int countCellsWithValue = 0;
-        float cellValue = 0f;
-        float cellSumValue = 0f;
+        val surfX = ((canvasX - Config.shiftBoxX) / Config.multiplayer * 1000).toInt() / 5 * 5
+        val surfX2 = (surfX.toFloat() / Config.spartaCellSize / 1000).toInt()
+        val surfX1 = ((canvasX - Config.shiftBoxX) / Config.multiplayer * 1000).toInt() / 5 * 5 + 5
+        val surfY = ((canvasY - Config.shiftBoxY) / Config.multiplayer * 1000).toFloat() / 5 * 5 / 1000
+        val surfY2 = (surfY / Config.spartaCellSize).toInt()
+        val frame = FrameGenerator.frameGenerator.getFrame(0)
+
+        var countCells = 0
+        var countCellsWithValue = 0
+        var cellValue = 0f
+        var cellSumValue = 0f
         if (FrameGenerator.inSurfSchema.containsKey(surfX)) {
-            Map<Integer, GridCell> cellIds = FrameGenerator.inSurfSchema.get(surfX);
-            Map<Integer, Float[]> frameCells = frame.getTimeframe().getGrid().getCells();
+            val cellIds = FrameGenerator.inSurfSchema[surfX]!!
+            val frameCells = frame.timeframe!!.grid.cells
 
-            countCells = cellIds.size();
-            for (GridCell gridCell : cellIds.values()) {
-                if (frameCells.containsKey(gridCell.getCellId())) {
+            countCells = cellIds.size
+            for (gridCell in cellIds.values) {
+                if (frameCells.containsKey(gridCell.cellId)) {
                     if (curColorizeType == ColorizeType.DENSITY_STATIC) {
-                        if (frameCells.get(gridCell.getCellId())[0] > 0f) {
-                            cellSumValue += frameCells.get(gridCell.getCellId())[0];
-                            countCellsWithValue++;
-                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
-                                cellValue = frameCells.get(gridCell.getCellId())[0];
+                        if (frameCells[gridCell.cellId]!![0] > 0f) {
+                            cellSumValue += frameCells[gridCell.cellId]!![0]
+                            countCellsWithValue++
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells[gridCell.cellId]!![0]
                             }
                         }
                     } else if (curColorizeType == ColorizeType.TEMPERATURE) {
-                        if (frameCells.get(gridCell.getCellId())[1] > 0f) {
-                            cellSumValue += frameCells.get(gridCell.getCellId())[1];
-                            countCellsWithValue++;
-                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
-                                cellValue = frameCells.get(gridCell.getCellId())[1];
+                        if (frameCells[gridCell.cellId]!![1] > 0f) {
+                            cellSumValue += frameCells[gridCell.cellId]!![1]
+                            countCellsWithValue++
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells[gridCell.cellId]!![1]
                             }
                         }
                     } else if (curColorizeType == ColorizeType.VELOCITY) {
-                        if (frameCells.get(gridCell.getCellId())[2] > 0f) {
-                            cellSumValue += frameCells.get(gridCell.getCellId())[2];
-                            countCellsWithValue++;
-                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
-                                cellValue = frameCells.get(gridCell.getCellId())[2];
+                        if (frameCells[gridCell.cellId]!![2] > 0f) {
+                            cellSumValue += frameCells[gridCell.cellId]!![2]
+                            countCellsWithValue++
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells[gridCell.cellId]!![2]
                             }
                         }
                     } else if (curColorizeType == ColorizeType.SOUND_VELOCITY) {
-                        if (frameCells.get(gridCell.getCellId())[3] > 0f) {
-                            cellSumValue += frameCells.get(gridCell.getCellId())[3];
-                            countCellsWithValue++;
-                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
-                                cellValue = frameCells.get(gridCell.getCellId())[3];
+                        if (frameCells[gridCell.cellId]!![3] > 0f) {
+                            cellSumValue += frameCells[gridCell.cellId]!![3]
+                            countCellsWithValue++
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells[gridCell.cellId]!![3]
                             }
                         }
                     } else if (curColorizeType == ColorizeType.MACH) {
-                        if (frameCells.get(gridCell.getCellId())[4] < Float.MAX_VALUE) {
-                            cellSumValue += frameCells.get(gridCell.getCellId())[4];
-                            countCellsWithValue++;
-                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
-                                cellValue = frameCells.get(gridCell.getCellId())[4];
+                        if (frameCells[gridCell.cellId]!![4] < Float.MAX_VALUE) {
+                            cellSumValue += frameCells[gridCell.cellId]!![4]
+                            countCellsWithValue++
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells[gridCell.cellId]!![4]
                             }
                         }
                     } else if (curColorizeType == ColorizeType.N_COUNT) {
-                        if (frameCells.get(gridCell.getCellId())[5] < Float.MAX_VALUE) {
-                            cellSumValue += frameCells.get(gridCell.getCellId())[5];
-                            countCellsWithValue++;
-                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
-                                cellValue = frameCells.get(gridCell.getCellId())[5];
+                        if (frameCells[gridCell.cellId]!![5] < Float.MAX_VALUE) {
+                            cellSumValue += frameCells[gridCell.cellId]!![5]
+                            countCellsWithValue++
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells[gridCell.cellId]!![5]
                             }
                         }
                     } else if (curColorizeType == ColorizeType.NRHO) {
-                        if (frameCells.get(gridCell.getCellId())[6] < Float.MAX_VALUE) {
-                            cellSumValue += frameCells.get(gridCell.getCellId())[6];
-                            countCellsWithValue++;
-                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
-                                cellValue = frameCells.get(gridCell.getCellId())[6];
+                        if (frameCells[gridCell.cellId]!![6] < Float.MAX_VALUE) {
+                            cellSumValue += frameCells[gridCell.cellId]!![6]
+                            countCellsWithValue++
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells[gridCell.cellId]!![6]
                             }
                         }
                     } else if (curColorizeType == ColorizeType.DENSITY_DYNAMIC) {
-                        if (frameCells.get(gridCell.getCellId())[7] > 0f) {
-                            cellSumValue += frameCells.get(gridCell.getCellId())[7];
-                            countCellsWithValue++;
-                            if (gridCell.getYLo() <= surfY && gridCell.getYHi() >= surfY) {
-                                cellValue = frameCells.get(gridCell.getCellId())[7];
+                        if (frameCells[gridCell.cellId]!![7] > 0f) {
+                            cellSumValue += frameCells[gridCell.cellId]!![7]
+                            countCellsWithValue++
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells[gridCell.cellId]!![7]
                             }
                         }
                     }
@@ -400,83 +420,87 @@ public class MainCanvas extends Canvas {
             }
         } else {
             if (FrameGenerator.gridSchemaRevert.containsKey(surfX2) &&
-                    FrameGenerator.gridSchemaRevert.get(surfX2).containsKey(surfY2)) {
-                int cellId = FrameGenerator.gridSchemaRevert.get(surfX2).get(surfY2);
-                Map<Integer, Float[]> frameCells = frame.getTimeframe().getGrid().getCells();
+                FrameGenerator.gridSchemaRevert[surfX2]!!.containsKey(surfY2)
+            ) {
+                val cellId: Int = FrameGenerator.gridSchemaRevert[surfX2]!![surfY2]!!
+                val frameCells = frame.timeframe!!.grid.cells
 
                 if (frameCells.containsKey(cellId)) {
                     if (curColorizeType == ColorizeType.DENSITY_STATIC) {
-                        if (frameCells.get(cellId)[0] > 0f) {
-                            cellValue = frameCells.get(cellId)[0];
+                        if (frameCells[cellId]!![0] > 0f) {
+                            cellValue = frameCells[cellId]!![0]
                         }
                     } else if (curColorizeType == ColorizeType.TEMPERATURE) {
-                        if (frameCells.get(cellId)[1] > 0f) {
-                            cellValue = frameCells.get(cellId)[1];
+                        if (frameCells[cellId]!![1] > 0f) {
+                            cellValue = frameCells[cellId]!![1]
                         }
                     } else if (curColorizeType == ColorizeType.VELOCITY) {
-                        if (frameCells.get(cellId)[2] > 0f) {
-                            cellValue = frameCells.get(cellId)[2];
+                        if (frameCells[cellId]!![2] > 0f) {
+                            cellValue = frameCells[cellId]!![2]
                         }
                     } else if (curColorizeType == ColorizeType.SOUND_VELOCITY) {
-                        if (frameCells.get(cellId)[3] > 0f) {
-                            cellValue = frameCells.get(cellId)[3];
+                        if (frameCells[cellId]!![3] > 0f) {
+                            cellValue = frameCells[cellId]!![3]
                         }
                     } else if (curColorizeType == ColorizeType.MACH) {
-                        if (frameCells.get(cellId)[4] < Float.MAX_VALUE) {
-                            cellValue = frameCells.get(cellId)[4];
+                        if (frameCells[cellId]!![4] < Float.MAX_VALUE) {
+                            cellValue = frameCells[cellId]!![4]
                         }
                     } else if (curColorizeType == ColorizeType.N_COUNT) {
-                        if (frameCells.get(cellId)[5] < Float.MAX_VALUE) {
-                            cellValue = frameCells.get(cellId)[5];
+                        if (frameCells[cellId]!![5] < Float.MAX_VALUE) {
+                            cellValue = frameCells[cellId]!![5]
                         }
                     } else if (curColorizeType == ColorizeType.NRHO) {
-                        if (frameCells.get(cellId)[6] < Float.MAX_VALUE) {
-                            cellValue = frameCells.get(cellId)[6];
+                        if (frameCells[cellId]!![6] < Float.MAX_VALUE) {
+                            cellValue = frameCells[cellId]!![6]
                         }
                     } else if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF) {
-                        cellValue = getDiffByDulov(frame, cellId);
+                        cellValue = getDiffByDulov(frame, cellId)!!
                     } else if (curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
-                        cellValue = getDiffByDulov(frame, cellId);
+                        cellValue = getDiffByDulov(frame, cellId)!!
                     } else if (curColorizeType == ColorizeType.NRHO_DIF) {
-                        cellValue = getDiffByDulov(frame, cellId);
+                        cellValue = getDiffByDulov(frame, cellId)!!
                     } else if (curColorizeType == ColorizeType.NRHO_DULOV) {
-                        cellValue = getDulovData(cellId);
+                        cellValue = getDulovData(cellId)!!
                     } else if (curColorizeType == ColorizeType.DENSITY_DYNAMIC) {
-                        if (frameCells.get(cellId)[7] > 0f) {
-                            cellValue = frameCells.get(cellId)[7];
+                        if (frameCells[cellId]!![7] > 0f) {
+                            cellValue = frameCells[cellId]!![7]
                         }
                     }
                 }
             }
         }
 
-        countCells = countCells == 0 ? 1 : countCells;
-        countCellsWithValue = countCellsWithValue == 0 ? 1 : countCellsWithValue;
-        String formattedCellValue = cellValue > 100000F ?
-                String.format("%.2e", cellValue) :
-                String.format("%.1f", cellValue);
-        String formattedCellSumValue = (cellSumValue / countCells) > 100000F ?
-                String.format("%.2e", cellSumValue / countCells) :
-                String.format("%.1f", cellSumValue / countCells);
-        String formattedPerCellSumValue = (cellSumValue / countCellsWithValue) > 100000F ?
-                String.format("%.2e", cellSumValue / countCellsWithValue) :
-                String.format("%.1f", cellSumValue / countCellsWithValue);
-        String text = String.format("%.3f - %.3f см: %s | %s | %s %s",
-                (float) surfX / 1000,
-                (float) surfX1 / 1000,
-                formattedCellValue,
-                formattedCellSumValue,
-                formattedPerCellSumValue,
-                curColorizeType.getUnits());
+        countCells = if (countCells == 0) 1 else countCells
+        countCellsWithValue = if (countCellsWithValue == 0) 1 else countCellsWithValue
+        val formattedCellValue =
+            if (cellValue > 100000f) String.format("%.2e", cellValue) else String.format("%.1f", cellValue)
+        val formattedCellSumValue = if ((cellSumValue / countCells) > 100000f) String.format(
+            "%.2e",
+            cellSumValue / countCells
+        ) else String.format("%.1f", cellSumValue / countCells)
+        val formattedPerCellSumValue = if ((cellSumValue / countCellsWithValue) > 100000f) String.format(
+            "%.2e",
+            cellSumValue / countCellsWithValue
+        ) else String.format("%.1f", cellSumValue / countCellsWithValue)
+        val text = String.format(
+            "%.3f - %.3f см: %s | %s | %s %s",
+            surfX.toFloat() / 1000,
+            surfX1.toFloat() / 1000,
+            formattedCellValue,
+            formattedCellSumValue,
+            formattedPerCellSumValue,
+            curColorizeType.units
+        )
 
-        GraphicsContext gc = this.getGraphicsContext2D();
+        val gc = this.getGraphicsContext2D()
 
-        gc.setFill(Color.GRAY);
-        gc.fillRect(canvasX, 0, 1, this.getHeight());
-        gc.fillRect(canvasX - ((float) text.length() * 6 / 2) - 1.5, 0, text.length() * 6 + 3, 22);
-        gc.setFill(Color.WHITE);
-        gc.fillText(text, canvasX - ((float) text.length() * 5 / 2), 15);
+        gc.fill = Color.GRAY
+        gc.fillRect(canvasX, 0.0, 1.0, this.height)
+        gc.fillRect(canvasX - (text.length.toFloat() * 6 / 2) - 1.5, 0.0, (text.length * 6 + 3).toDouble(), 22.0)
+        gc.fill = Color.WHITE
+        gc.fillText(text, canvasX - (text.length.toFloat() * 5 / 2), 15.0)
 
-        EventBusFactory.getEventBus().post(new DrawDensityEvent((float) surfX / 1000));
+        EventBusFactory.getEventBus().post(DrawDensityEvent(surfX.toFloat() / 1000))
     }
 }

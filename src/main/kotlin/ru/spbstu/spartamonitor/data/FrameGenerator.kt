@@ -68,8 +68,6 @@ class FrameGenerator : Runnable {
                     println("\u001B[31m Не смогли разбить файлы дампов на группы \u001B[0m")
                 }
 
-                this.timeframes.clear()
-
                 try {
                     this.parser.parsDumps(this.timeframes, startFrame, endFrame)
                 } catch (_: Exception) {
@@ -126,7 +124,7 @@ class FrameGenerator : Runnable {
         }
         if (this.isRunning || this.showOneIteration || countSteps == 0) {
             synchronized(lock) {
-                frame.timeframe = this.timeframes[curFrame]!!
+                frame.timeframe = this.timeframes[curFrame]
             }
         }
         frame.frameNumber = curFrame

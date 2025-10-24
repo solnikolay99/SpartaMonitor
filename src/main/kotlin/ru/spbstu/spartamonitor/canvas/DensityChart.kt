@@ -1,212 +1,238 @@
-package ru.spbstu.spartamonitor.canvas;
+package ru.spbstu.spartamonitor.canvas
 
-import config.Config;
-import javafx.beans.NamedArg;
-import javafx.collections.ObservableList;
-import javafx.scene.chart.Axis;
-import javafx.scene.chart.LineChart;
-import javafx.scene.chart.XYChart;
-import ru.spbstu.spartamonitor.calculate.Calculation;
-import ru.spbstu.spartamonitor.calculate.Diameter;
-import ru.spbstu.spartamonitor.colorize.ColorizeType;
-import ru.spbstu.spartamonitor.data.FrameGenerator;
-import ru.spbstu.spartamonitor.data.models.GridCell;
+import config.Config
+import javafx.beans.NamedArg
+import javafx.collections.ObservableList
+import javafx.scene.chart.Axis
+import javafx.scene.chart.LineChart
+import ru.spbstu.spartamonitor.calculate.Calculation
+import ru.spbstu.spartamonitor.colorize.ColorizeType
+import ru.spbstu.spartamonitor.data.FrameGenerator
+import ru.spbstu.spartamonitor.data.models.GridCell
+import java.math.BigDecimal
+import java.util.*
+import kotlin.math.max
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Objects;
+class DensityChart : LineChart<String, Number> {
+    private var curColorizeType: ColorizeType = ColorizeType.DENSITY_STATIC
 
-public class DensityChart extends LineChart<String, Number> {
+    constructor(
+        @NamedArg("xAxis") xAxis: Axis<String>,
+        @NamedArg("yAxis") yAxis: Axis<Number>,
+        @NamedArg("data") data: ObservableList<Series<String, Number>>
+    ) : super(xAxis, yAxis, data)
 
-    private ColorizeType curColorizeType = ColorizeType.DENSITY_STATIC;
-    public static Float dulovXLine = null;
-    public static float dulovYLine = 2.0f;
+    constructor(@NamedArg("xAxis") xAxis: Axis<String>, @NamedArg("yAxis") yAxis: Axis<Number>) : super(
+        xAxis,
+        yAxis
+    )
 
-    public DensityChart(@NamedArg("xAxis") Axis<String> xAxis,
-                        @NamedArg("yAxis") Axis<Number> yAxis,
-                        @NamedArg("data") ObservableList<Series<String, Number>> data) {
-        super(xAxis, yAxis, data);
-    }
-
-    public DensityChart(@NamedArg("xAxis") Axis<String> xAxis, @NamedArg("yAxis") Axis<Number> yAxis) {
-        super(xAxis, yAxis);
-    }
-
-    public void drawIteration(FrameGenerator.Frame frame, ColorizeType colorizeType) {
+    fun drawIteration(frame: FrameGenerator.Frame, colorizeType: ColorizeType) {
         if (curColorizeType != colorizeType) {
-            this.getData().clear();
-            curColorizeType = colorizeType;
+            this.data.clear()
+            curColorizeType = colorizeType
         }
-        if (colorizeType == ColorizeType.DENSITY_STATIC_DIF
-                || colorizeType == ColorizeType.DENSITY_DYNAMIC_DIF
-                || colorizeType == ColorizeType.NRHO_DIF) {
-            showDulovDiffData(frame);
+        if (colorizeType == ColorizeType.DENSITY_STATIC_DIF || colorizeType == ColorizeType.DENSITY_DYNAMIC_DIF || colorizeType == ColorizeType.NRHO_DIF) {
+            showDulovDiffData(frame)
         } else {
-            showTargetData(frame);
+            showTargetData(frame)
         }
     }
 
-    protected Float getDulovData(int cellId) {
+    private fun getDulovData(cellId: Int): Float? {
         if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF || curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
             if (FrameGenerator.dulovsPressureData.containsKey(cellId)) {
-                return FrameGenerator.dulovsPressureData.get(cellId);
+                return FrameGenerator.dulovsPressureData[cellId]
             }
         } else if (curColorizeType == ColorizeType.NRHO_DIF) {
             if (FrameGenerator.dulovsNConcentrationData.containsKey(cellId)) {
-                return FrameGenerator.dulovsNConcentrationData.get(cellId);
+                return FrameGenerator.dulovsNConcentrationData[cellId]
             }
         }
-        return null;
+        return null
     }
 
-    protected float getCellValue(FrameGenerator.Frame frame, int cellId) {
-        if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF) {
-            return frame.getTimeframe().getGrid().getCells().get(cellId)[0];
-        } else if (curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
-            return frame.getTimeframe().getGrid().getCells().get(cellId)[7];
-        } else if (curColorizeType == ColorizeType.NRHO_DIF) {
-            return frame.getTimeframe().getGrid().getCells().get(cellId)[6];
-        } else {
-            return 0f;
+    private fun getCellValue(frame: FrameGenerator.Frame, cellId: Int): Float {
+        return when (curColorizeType) {
+            ColorizeType.DENSITY_STATIC_DIF -> {
+                frame.timeframe!!.grid.cells[cellId]!![0]
+            }
+
+            ColorizeType.DENSITY_DYNAMIC_DIF -> {
+                frame.timeframe!!.grid.cells[cellId]!![7]
+            }
+
+            ColorizeType.NRHO_DIF -> {
+                frame.timeframe!!.grid.cells[cellId]!![6]
+            }
+
+            else -> {
+                0f
+            }
         }
     }
 
-    public void showDulovDiffData(FrameGenerator.Frame frame) {
-        HashMap<Integer, Float> dulovData = new HashMap<>();
+    fun showDulovDiffData(frame: FrameGenerator.Frame) {
+        val dulovData = HashMap<Int, Float>()
 
-        float minX = FrameGenerator.gridSchema.get(Collections.min(FrameGenerator.dulovsPressureData.keySet())).getXLo();
-        float maxX = FrameGenerator.gridSchema.get(Collections.max(FrameGenerator.dulovsPressureData.keySet())).getXLo();
+        val minX = FrameGenerator.gridSchema[FrameGenerator.dulovsPressureData.keys.min()]!!.xLo
+        val maxX = FrameGenerator.gridSchema[FrameGenerator.dulovsPressureData.keys.min()]!!.xLo
         if (dulovXLine == null) {
-            dulovXLine = (maxX + minX) / 2f;
+            dulovXLine = (maxX + minX) / 2f
         }
 
-        this.getData().clear();
+        this.data.clear()
 
         if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF || curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
-            for (int cellId : frame.getTimeframe().getGrid().getCells().keySet()) {
-                GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
-                if (gridCell.getXLo() < minX || gridCell.getXLo() > maxX) {
-                    continue;
+            for (cellId in frame.timeframe!!.grid.cells.keys) {
+                val gridCell: GridCell = FrameGenerator.gridSchema[cellId]!!
+                if (gridCell.xLo !in minX..maxX) {
+                    continue
                 }
-                if (gridCell.getYLo() <= dulovYLine && dulovYLine < gridCell.getXHi()) {
-                    dulovData.put(cellId, gridCell.getXLo());
+                if (gridCell.yLo <= dulovYLine && dulovYLine < gridCell.xHi) {
+                    dulovData[cellId] = gridCell.xLo
                 }
             }
         } else if (curColorizeType == ColorizeType.NRHO_DIF) {
-            for (int cellId : frame.getTimeframe().getGrid().getCells().keySet()) {
-                GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
-                if (gridCell.getXLo() <= dulovXLine && dulovXLine < gridCell.getXHi()) {
-                    dulovData.put(cellId, gridCell.getYLo());
+            for (cellId in frame.timeframe!!.grid.cells.keys) {
+                val gridCell: GridCell = FrameGenerator.gridSchema[cellId]!!
+                if (gridCell.xLo <= dulovXLine!! && dulovXLine!! < gridCell.xHi) {
+                    dulovData[cellId] = gridCell.yLo
                 }
             }
         }
 
-        XYChart.Series<String, Number> series1 = new XYChart.Series<>();
-        XYChart.Series<String, Number> series2 = new XYChart.Series<>();
-        int countSteps = curColorizeType == ColorizeType.NRHO_DIF ? dulovData.size() : 100;
-        int stepSize = curColorizeType == ColorizeType.NRHO_DIF ? 10 : 1;
-        ArrayList<Integer> dulovCells = new ArrayList<>(dulovData.keySet().stream().toList());
-        Collections.sort(dulovCells);
-        for (int i = 0; i < countSteps; i += stepSize) {
-            Float dulovValue = getDulovData(dulovCells.get(i));
-            Float originalValue = getCellValue(frame, dulovCells.get(i));
-            System.out.printf("id = %d; xLo = %.4f; yLo = %.4f; dulov = %.3f; actual = %.3f%n", dulovCells.get(i),
-                    FrameGenerator.gridSchema.get(dulovCells.get(i)).getXLo(),
-                    FrameGenerator.gridSchema.get(dulovCells.get(i)).getYLo(),
-                    dulovValue,
-                    originalValue);
-            series1.getData().add(new Data<>(String.valueOf(dulovData.get(dulovCells.get(i))), Objects.requireNonNullElse(dulovValue, 0)));
-            series2.getData().add(new XYChart.Data<>(String.valueOf(dulovData.get(dulovCells.get(i))), originalValue));
+        val series1 = Series<String, Number>()
+        val series2 = Series<String, Number>()
+        val countSteps = if (curColorizeType == ColorizeType.NRHO_DIF) dulovData.size else 100
+        val stepSize = if (curColorizeType == ColorizeType.NRHO_DIF) 10 else 1
+        val dulovCells = dulovData.keys.toList()
+        dulovCells.sortedBy { it }
+        var i = 0
+        while (i < countSteps) {
+            val dulovValue = getDulovData(dulovCells[i])
+            val originalValue = getCellValue(frame, dulovCells[i])
+            System.out.printf(
+                "id = %d; xLo = %.4f; yLo = %.4f; dulov = %.3f; actual = %.3f%n", dulovCells[i],
+                FrameGenerator.gridSchema[dulovCells[i]]!!.xLo,
+                FrameGenerator.gridSchema[dulovCells[i]]!!.yLo,
+                dulovValue,
+                originalValue
+            )
+            series1.getData().add(
+                Data(
+                    dulovData.get(dulovCells[i]).toString(),
+                    Objects.requireNonNullElse(dulovValue, 0)
+                )
+            )
+            series2.getData().add(Data(dulovData.get(dulovCells[i]).toString(), originalValue))
+            i += stepSize
         }
-        this.getData().add(series1);
-        this.getData().add(series2);
+        this.data.add(series1)
+        this.data.add(series2)
 
         if (!dulovData.isEmpty()) {
-            if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF) {
-                this.setTitle(String.format("График среза по давлению%n для y = %.4f см", dulovYLine));
-            } else if (curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
-                this.setTitle(String.format("График среза по полному давлению%n для y = %.4f см", dulovYLine));
-            } else if (curColorizeType == ColorizeType.NRHO_DIF) {
-                this.setTitle(String.format("График среза по концентрации%n для х = %.4f см", dulovXLine));
+            when (curColorizeType) {
+                ColorizeType.DENSITY_STATIC_DIF -> {
+                    this.title = String.format("График среза по давлению%n для y = %.4f см", dulovYLine)
+                }
+
+                ColorizeType.DENSITY_DYNAMIC_DIF -> {
+                    this.title = String.format("График среза по полному давлению%n для y = %.4f см", dulovYLine)
+                }
+
+                ColorizeType.NRHO_DIF -> {
+                    this.title = String.format("График среза по концентрации%n для х = %.4f см", dulovXLine)
+                }
+
+                else -> {}
             }
         } else {
-            this.setTitle("График невозможно построить из-за отсутствия данных");
+            this.title = "График невозможно построить из-за отсутствия данных"
         }
     }
 
-    public void showTargetData(FrameGenerator.Frame frame) {
-        int targetPoints = 0;
-        int totalPoints = 0;
-        float targetDiameter = 0f;
-        BigDecimal outTotalPoints = new BigDecimal(0);
-        BigDecimal outTargetPoints = new BigDecimal(0);
+    fun showTargetData(frame: FrameGenerator.Frame) {
+        var targetPoints = 0
+        var totalPoints = 0
+        var targetDiameter = 0f
+        var outTotalPoints = BigDecimal(0)
+        var outTargetPoints = BigDecimal(0)
 
-        if (this.getData().isEmpty()) {
-            frame.getTimeframe().getTarget();
-            Series<String, Number> series = new Series<>();
+        if (this.data.isEmpty()) {
+            frame.timeframe!!.target
+            val series = Series<String, Number>()
 
-            int maxY = 0;
-            Diameter diameter = new Calculation().calculateTargetDiameter(frame.getTimeframe(), 0.5f);
+            var maxY = 0
+            val diameter = Calculation().calculateTargetDiameter(frame.timeframe!!, 0.5f)
 
-            for (int i = 0; i < frame.getTimeframe().getTarget().size(); i++) {
-                series.getData().add(new Data<>(String.valueOf(i * 8 / 10), frame.getTimeframe().getTarget().get(i)));
-                maxY = Math.max(maxY, frame.getTimeframe().getTarget().get(i));
+            for (i in frame.timeframe!!.target.indices) {
+                series.getData().add(Data((i * 8 / 10).toString(), frame.timeframe!!.target[i]))
+                maxY = max(maxY, frame.timeframe!!.target[i])
             }
-            this.getData().add(series);
+            this.data.add(series)
 
-            Series<String, Number> series2 = new Series<>();
-            series2.getData().add(new Data<>(String.valueOf(diameter.getLeftBorder() / 10), 0));
-            series2.getData().add(new Data<>(String.valueOf(diameter.getLeftBorder() / 10), maxY));
-            this.getData().add(series2);
+            val series2 = Series<String, Number>()
+            series2.getData().add(Data((diameter.leftBorder / 10).toString(), 0))
+            series2.getData().add(Data((diameter.leftBorder / 10).toString(), maxY))
+            this.data.add(series2)
 
-            Series<String, Number> series3 = new Series<>();
-            series3.getData().add(new Data<>(String.valueOf(diameter.getRightBorder() / 10), 0));
-            series3.getData().add(new Data<>(String.valueOf(diameter.getRightBorder() / 10), maxY));
-            this.getData().add(series3);
+            val series3 = Series<String, Number>()
+            series3.getData().add(Data((diameter.rightBorder / 10).toString(), 0))
+            series3.getData().add(Data((diameter.rightBorder / 10).toString(), maxY))
+            this.data.add(series3)
 
-            targetDiameter = (float) diameter.getDiameter() / 10;
+            targetDiameter = diameter.diameter.toFloat() / 10
         } else {
-            if (frame.getTimeframe() != null) {
-                int maxY = 0;
-                Diameter diameter = new Calculation().calculateTargetDiameter(frame.getTimeframe(), 0.5f);
+            if (frame.timeframe != null) {
+                var maxY = 0
+                val diameter = Calculation().calculateTargetDiameter(frame.timeframe!!, 0.5f)
 
-                for (int i = 0; i < frame.getTimeframe().getTarget().size(); i++) {
-                    XYChart.Data<String, Number> element = this.getData().getFirst().getData().get(i);
-                    element.setYValue(frame.getTimeframe().getTarget().get(i));
-                    maxY = Math.max(maxY, frame.getTimeframe().getTarget().get(i));
-                    targetPoints += frame.getTimeframe().getTarget().get(i);
+                for (i in frame.timeframe!!.target.indices) {
+                    val element = this.data[0].getData()[i]
+                    element.setYValue(frame.timeframe!!.target[i])
+                    maxY = max(maxY, frame.timeframe!!.target[i])
+                    targetPoints += frame.timeframe!!.target[i]
                 }
 
-                this.getData().get(1).getData().getFirst().setXValue(String.valueOf(diameter.getLeftBorder() / 10));
-                this.getData().get(1).getData().getFirst().setYValue(0);
-                this.getData().get(1).getData().get(1).setXValue(String.valueOf(diameter.getLeftBorder() / 10));
-                this.getData().get(1).getData().get(1).setYValue(maxY);
-                this.getData().get(2).getData().getFirst().setXValue(String.valueOf(diameter.getRightBorder() / 10));
-                this.getData().get(2).getData().getFirst().setYValue(0);
-                this.getData().get(2).getData().get(1).setXValue(String.valueOf(diameter.getRightBorder() / 10));
-                this.getData().get(2).getData().get(1).setYValue(maxY);
+                this.data[1].getData()[0].setXValue((diameter.leftBorder / 10).toString())
+                this.data[1].getData()[0].setYValue(0)
+                this.data[1].getData()[1].setXValue((diameter.leftBorder / 10).toString())
+                this.data[1].getData()[1].setYValue(maxY)
+                this.data[2].getData()[0].setXValue((diameter.rightBorder / 10).toString())
+                this.data[2].getData()[0].setYValue(0)
+                this.data[2].getData()[1].setXValue((diameter.rightBorder / 10).toString())
+                this.data[2].getData()[1].setYValue(maxY)
 
-                targetDiameter = (float) diameter.getDiameter() / 10;
+                targetDiameter = diameter.diameter.toFloat() / 10
             } else {
-                this.getData().get(0).getData().forEach(element -> element.setYValue(0));
-                this.getData().get(1).getData().forEach(element -> element.setYValue(0));
-                this.getData().get(2).getData().forEach(element -> element.setYValue(0));
+                this.data[0].getData().forEach { element -> element!!.setYValue(0) }
+                this.data[1].getData().forEach { element -> element!!.setYValue(0) }
+                this.data[2].getData().forEach { element -> element!!.setYValue(0) }
             }
         }
 
-        if (frame.getTimeframe() != null) {
-            totalPoints = frame.getTimeframe().getCountPoints();
-            outTotalPoints = new BigDecimal(Config.globalParams.get("fnum")).multiply(BigDecimal.valueOf(totalPoints));
-            outTargetPoints = new BigDecimal(Config.globalParams.get("fnum")).multiply(BigDecimal.valueOf(targetPoints));
+        if (frame.timeframe != null) {
+            totalPoints = frame.timeframe!!.countPoints
+            outTotalPoints =
+                BigDecimal(Config.globalParams["fnum"]).multiply(BigDecimal.valueOf(totalPoints.toLong()))
+            outTargetPoints =
+                BigDecimal(Config.globalParams["fnum"]).multiply(BigDecimal.valueOf(targetPoints.toLong()))
         }
 
-        this.setTitle(String.format("Общее число частиц:%n" +
-                        "%.2e (%d)%n" +
-                        "Плотность частиц на мишени:%n" +
-                        "%.2e (%d)%n" +
-                        "Диаметр: %.1f мм",
-                outTotalPoints, totalPoints, outTargetPoints, targetPoints, targetDiameter));
+        this.title = String.format(
+            "Общее число частиц:%n" +
+                    "%.2e (%d)%n" +
+                    "Плотность частиц на мишени:%n" +
+                    "%.2e (%d)%n" +
+                    "Диаметр: %.1f мм",
+            outTotalPoints, totalPoints, outTargetPoints, targetPoints, targetDiameter
+        )
+    }
+
+    companion object {
+        @JvmField
+        var dulovXLine: Float? = null
+        var dulovYLine: Float = 2.0f
     }
 }

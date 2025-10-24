@@ -11,7 +11,6 @@ import ru.spbstu.spartamonitor.logger.Logger
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.stream.IntStream
 import kotlin.io.path.pathString
 import kotlin.math.*
 
@@ -81,7 +80,7 @@ class Parser {
 
     fun parsDumps(timeFrames: MutableList<Timeframe?>, startFrame: Int, endFrame: Int) {
         timeFrames.clear()
-        IntStream.range(0, allFrames.size).forEach { _ -> timeFrames.add(null) }
+        (0 until allFrames.size).forEach { _ -> timeFrames.add(null) }
         val sortedKeys = allFrames.keys.stream().sorted().toList()
         for (i in startFrame until min(endFrame, sortedKeys.size)) {
             Logger.startTimer("Pars data to timeframe")
