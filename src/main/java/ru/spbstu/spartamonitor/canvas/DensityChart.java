@@ -63,11 +63,11 @@ public class DensityChart extends LineChart<String, Number> {
 
     protected float getCellValue(FrameGenerator.Frame frame, int cellId) {
         if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF) {
-            return frame.timeframe.getGrid().getCells().get(cellId)[0];
+            return frame.getTimeframe().getGrid().getCells().get(cellId)[0];
         } else if (curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
-            return frame.timeframe.getGrid().getCells().get(cellId)[7];
+            return frame.getTimeframe().getGrid().getCells().get(cellId)[7];
         } else if (curColorizeType == ColorizeType.NRHO_DIF) {
-            return frame.timeframe.getGrid().getCells().get(cellId)[6];
+            return frame.getTimeframe().getGrid().getCells().get(cellId)[6];
         } else {
             return 0f;
         }
@@ -85,7 +85,7 @@ public class DensityChart extends LineChart<String, Number> {
         this.getData().clear();
 
         if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF || curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
-            for (int cellId : frame.timeframe.getGrid().getCells().keySet()) {
+            for (int cellId : frame.getTimeframe().getGrid().getCells().keySet()) {
                 GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
                 if (gridCell.getXLo() < minX || gridCell.getXLo() > maxX) {
                     continue;
@@ -95,7 +95,7 @@ public class DensityChart extends LineChart<String, Number> {
                 }
             }
         } else if (curColorizeType == ColorizeType.NRHO_DIF) {
-            for (int cellId : frame.timeframe.getGrid().getCells().keySet()) {
+            for (int cellId : frame.getTimeframe().getGrid().getCells().keySet()) {
                 GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
                 if (gridCell.getXLo() <= dulovXLine && dulovXLine < gridCell.getXHi()) {
                     dulovData.put(cellId, gridCell.getYLo());
@@ -144,15 +144,15 @@ public class DensityChart extends LineChart<String, Number> {
         BigDecimal outTargetPoints = new BigDecimal(0);
 
         if (this.getData().isEmpty()) {
-            frame.timeframe.getTarget();
+            frame.getTimeframe().getTarget();
             Series<String, Number> series = new Series<>();
 
             int maxY = 0;
-            Diameter diameter = new Calculation().calculateTargetDiameter(frame.timeframe, 0.5f);
+            Diameter diameter = new Calculation().calculateTargetDiameter(frame.getTimeframe(), 0.5f);
 
-            for (int i = 0; i < frame.timeframe.getTarget().size(); i++) {
-                series.getData().add(new Data<>(String.valueOf(i * 8 / 10), frame.timeframe.getTarget().get(i)));
-                maxY = Math.max(maxY, frame.timeframe.getTarget().get(i));
+            for (int i = 0; i < frame.getTimeframe().getTarget().size(); i++) {
+                series.getData().add(new Data<>(String.valueOf(i * 8 / 10), frame.getTimeframe().getTarget().get(i)));
+                maxY = Math.max(maxY, frame.getTimeframe().getTarget().get(i));
             }
             this.getData().add(series);
 
@@ -168,15 +168,15 @@ public class DensityChart extends LineChart<String, Number> {
 
             targetDiameter = (float) diameter.getDiameter() / 10;
         } else {
-            if (frame.timeframe != null) {
+            if (frame.getTimeframe() != null) {
                 int maxY = 0;
-                Diameter diameter = new Calculation().calculateTargetDiameter(frame.timeframe, 0.5f);
+                Diameter diameter = new Calculation().calculateTargetDiameter(frame.getTimeframe(), 0.5f);
 
-                for (int i = 0; i < frame.timeframe.getTarget().size(); i++) {
+                for (int i = 0; i < frame.getTimeframe().getTarget().size(); i++) {
                     XYChart.Data<String, Number> element = this.getData().getFirst().getData().get(i);
-                    element.setYValue(frame.timeframe.getTarget().get(i));
-                    maxY = Math.max(maxY, frame.timeframe.getTarget().get(i));
-                    targetPoints += frame.timeframe.getTarget().get(i);
+                    element.setYValue(frame.getTimeframe().getTarget().get(i));
+                    maxY = Math.max(maxY, frame.getTimeframe().getTarget().get(i));
+                    targetPoints += frame.getTimeframe().getTarget().get(i);
                 }
 
                 this.getData().get(1).getData().getFirst().setXValue(String.valueOf(diameter.getLeftBorder() / 10));
@@ -196,8 +196,8 @@ public class DensityChart extends LineChart<String, Number> {
             }
         }
 
-        if (frame.timeframe != null) {
-            totalPoints = frame.timeframe.getCountPoints();
+        if (frame.getTimeframe() != null) {
+            totalPoints = frame.getTimeframe().getCountPoints();
             outTotalPoints = new BigDecimal(Config.globalParams.get("fnum")).multiply(BigDecimal.valueOf(totalPoints));
             outTargetPoints = new BigDecimal(Config.globalParams.get("fnum")).multiply(BigDecimal.valueOf(targetPoints));
         }

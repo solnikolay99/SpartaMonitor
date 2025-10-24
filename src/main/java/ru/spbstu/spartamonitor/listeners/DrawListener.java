@@ -14,12 +14,12 @@ public class DrawListener {
 
     @Subscribe
     public void handleDrawEvent(DrawEvent event) {
-        if (event.direction() != null) {
-            if (event.direction() == 0) {
+        if (event.getDirection() != null) {
+            if (event.getDirection() == 0) {
                 controller.frameGenerator.showOneIteration();
                 controller.drawIteration(0);
             } else {
-                direction = event.direction();
+                direction = event.getDirection();
                 controller.drawIteration(direction);
             }
         } else {

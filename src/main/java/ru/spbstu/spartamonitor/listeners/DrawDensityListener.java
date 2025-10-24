@@ -7,6 +7,6 @@ import ru.spbstu.spartamonitor.events.DrawDensityEvent;
 public record DrawDensityListener(SpartaMonitorController controller) {
     @Subscribe
     public void handleDrawEvent(DrawDensityEvent event) {
-        controller.drawDensityChart(event.xCoord());
+        controller.drawDensityChart(event.getXCoord());
     }
 }

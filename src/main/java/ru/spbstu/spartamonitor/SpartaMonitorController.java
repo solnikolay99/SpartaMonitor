@@ -26,11 +26,11 @@ import java.awt.image.RenderedImage;
 import java.io.File;
 import java.nio.file.Path;
 
-import static config.ConfigKt.PARSE_POINTS;
+import static config.Config.*;
 
 public class SpartaMonitorController {
 
-    public final FrameGenerator frameGenerator = FrameGenerator.getFrameGenerator();
+    public final FrameGenerator frameGenerator = FrameGenerator.frameGenerator;
     private final Thread fgThread;
     private volatile boolean drawIterationFinished = true;
     private Stage mainStage;
@@ -232,7 +232,7 @@ public class SpartaMonitorController {
 
     @FXML
     protected void onClose() {
-        this.frameGenerator.isAlive = false;
+        this.frameGenerator.setAlive(false);
         this.fgThread.interrupt();
     }
 
@@ -279,19 +279,19 @@ public class SpartaMonitorController {
     }
 
     public void drawIteration(int playDirection) {
-        if (drawIterationFinished && (frameGenerator.isRunning || frameGenerator.showOneIteration)) {
+        if (drawIterationFinished && (frameGenerator.isRunning() || frameGenerator.getShowOneIteration())) {
             drawIterationFinished = false;
 
             FrameGenerator.Frame frame;
             do {
                 frame = this.frameGenerator.getFrame(playDirection);
-            } while (frame.timeframe == null);
+            } while (frame.getTimeframe() == null);
 
-            frameGenerator.showOneIteration = Boolean.FALSE;
+            frameGenerator.setShowOneIteration(false);
 
             Logger.startTimer("Draw iteration");
 
-            String title = String.format("%.0f мкс", (frame.frameNumber) * (Config.tStep / 1e-6 * 100));
+            String title = String.format("%.0f мкс", (frame.getFrameNumber()) * (Config.tStep / 1e-6 * 100));
             animationCanvas.drawIteration(this.frameGenerator, frame, colorizeType, drawByPoints, title);
             densityChart.drawIteration(frame, colorizeType);
 
@@ -307,7 +307,7 @@ public class SpartaMonitorController {
         FrameGenerator.Frame frame;
         do {
             frame = this.frameGenerator.getFrame(0);
-        } while (frame.timeframe == null);
+        } while (frame.getTimeframe() == null);
 
         DensityChart.dulovXLine = xCoord;
         densityChart.drawIteration(frame, colorizeType);

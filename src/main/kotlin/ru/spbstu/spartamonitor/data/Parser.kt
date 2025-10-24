@@ -1,14 +1,10 @@
 package ru.spbstu.spartamonitor.data
 
 import config.Config
+import config.Config.Companion.PARSE_POINTS
 import config.MAX_BOX_X
 import config.MAX_BOX_Y
-import config.PARSE_POINTS
-import ru.spbstu.spartamonitor.data.models.Grid
-import ru.spbstu.spartamonitor.data.models.GridCell
-import ru.spbstu.spartamonitor.data.models.Point
-import ru.spbstu.spartamonitor.data.models.Polygon
-import ru.spbstu.spartamonitor.data.models.Timeframe
+import ru.spbstu.spartamonitor.data.models.*
 import ru.spbstu.spartamonitor.eventbus.EventBusFactory
 import ru.spbstu.spartamonitor.events.ParserEvent
 import ru.spbstu.spartamonitor.logger.Logger
@@ -17,11 +13,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.stream.IntStream
 import kotlin.io.path.pathString
-import kotlin.math.abs
-import kotlin.math.max
-import kotlin.math.min
-import kotlin.math.round
-import kotlin.math.sqrt
+import kotlin.math.*
 
 class Parser {
 

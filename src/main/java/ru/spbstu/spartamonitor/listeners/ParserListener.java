@@ -7,6 +7,6 @@ import ru.spbstu.spartamonitor.events.ParserEvent;
 public record ParserListener(SpartaMonitorController controller) {
     @Subscribe
     public void handleParserEvent(ParserEvent event) {
-        controller.currentFrameNumber.setText(String.format("%d", event.countFrames()));
+        controller.currentFrameNumber.setText(String.format("%d", event.getCountFrames()));
     }
 }

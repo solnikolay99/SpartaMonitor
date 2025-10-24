@@ -125,19 +125,19 @@ public class MainCanvas extends Canvas {
     protected Float getDiffByDulov(FrameGenerator.Frame frame, int cellId) {
         if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF) {
             if (FrameGenerator.dulovsPressureData.containsKey(cellId)) {
-                float origCellValue = frame.timeframe.getGrid().getCells().get(cellId)[0];
+                float origCellValue = frame.getTimeframe().getGrid().getCells().get(cellId)[0];
                 float dulovsValue = FrameGenerator.dulovsPressureData.get(cellId);
                 return Math.abs(origCellValue / dulovsValue * 100);
             }
         } else if (curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
             if (FrameGenerator.dulovsPressureData.containsKey(cellId)) {
-                float origCellValue = frame.timeframe.getGrid().getCells().get(cellId)[7];
+                float origCellValue = frame.getTimeframe().getGrid().getCells().get(cellId)[7];
                 float dulovsValue = FrameGenerator.dulovsPressureData.get(cellId);
                 return Math.abs(origCellValue / dulovsValue * 100);
             }
         } else if (curColorizeType == ColorizeType.NRHO_DIF) {
             if (FrameGenerator.dulovsNConcentrationData.containsKey(cellId)) {
-                float origCellValue = frame.timeframe.getGrid().getCells().get(cellId)[6];
+                float origCellValue = frame.getTimeframe().getGrid().getCells().get(cellId)[6];
                 float dulovsValue = FrameGenerator.dulovsNConcentrationData.get(cellId);
                 return Math.abs(origCellValue / dulovsValue * 100);
             }
@@ -158,17 +158,17 @@ public class MainCanvas extends Canvas {
         assert colorizeType != null;
 
         Float value = switch (colorizeType) {
-            case DENSITY_STATIC -> frame.timeframe.getGrid().getCells().get(cellId)[0];
-            case TEMPERATURE -> frame.timeframe.getGrid().getCells().get(cellId)[1];
-            case VELOCITY -> frame.timeframe.getGrid().getCells().get(cellId)[2];
-            case SOUND_VELOCITY -> frame.timeframe.getGrid().getCells().get(cellId)[3];
-            case MACH -> frame.timeframe.getGrid().getCells().get(cellId)[4];
-            case BIND -> (float) frame.timeframe.getGrid().getProcs().get(cellId);
-            case N_COUNT -> frame.timeframe.getGrid().getCells().get(cellId)[5];
-            case NRHO -> frame.timeframe.getGrid().getCells().get(cellId)[6];
+            case DENSITY_STATIC -> frame.getTimeframe().getGrid().getCells().get(cellId)[0];
+            case TEMPERATURE -> frame.getTimeframe().getGrid().getCells().get(cellId)[1];
+            case VELOCITY -> frame.getTimeframe().getGrid().getCells().get(cellId)[2];
+            case SOUND_VELOCITY -> frame.getTimeframe().getGrid().getCells().get(cellId)[3];
+            case MACH -> frame.getTimeframe().getGrid().getCells().get(cellId)[4];
+            case BIND -> (float) frame.getTimeframe().getGrid().getProcs().get(cellId);
+            case N_COUNT -> frame.getTimeframe().getGrid().getCells().get(cellId)[5];
+            case NRHO -> frame.getTimeframe().getGrid().getCells().get(cellId)[6];
             case DENSITY_STATIC_DIF, DENSITY_DYNAMIC_DIF, NRHO_DIF -> getDiffByDulov(frame, cellId);
             case NRHO_DULOV -> getDulovData(cellId);
-            case DENSITY_DYNAMIC -> frame.timeframe.getGrid().getCells().get(cellId)[7];
+            case DENSITY_DYNAMIC -> frame.getTimeframe().getGrid().getCells().get(cellId)[7];
         };
 
         if (value == null) {
@@ -189,7 +189,7 @@ public class MainCanvas extends Canvas {
         float yLoBorder = -Config.shiftBoxY * Config.monitorCellSizeY / zoom;
         float yHiBorder = (MAX_BOX_Y - Config.shiftBoxY) * Config.monitorCellSizeY / zoom;
 
-        for (Number[] point : frame.timeframe.getPoints()) {
+        for (Number[] point : frame.getTimeframe().getPoints()) {
             if (point[1].floatValue() < xLoBorder || xHiBorder < point[1].floatValue()) {
                 continue;
             } else if (point[2].floatValue() < yLoBorder || yHiBorder < point[2].floatValue()) {
@@ -198,7 +198,7 @@ public class MainCanvas extends Canvas {
             Color color;
             try {
                 int cellId = point[3].intValue();
-                if (!frame.timeframe.getGrid().getCells().containsKey(cellId)) {
+                if (!frame.getTimeframe().getGrid().getCells().containsKey(cellId)) {
                     color = Color.BLACK;
                 } else {
                     color = getColorForType(frame, cellId, colorizeType);
@@ -221,7 +221,7 @@ public class MainCanvas extends Canvas {
         float yLoBorder = -Config.shiftBoxY * Config.monitorCellSizeY / zoom;
         float yHiBorder = (MAX_BOX_Y - Config.shiftBoxY) * Config.monitorCellSizeY / zoom;
 
-        for (Integer cellId : frame.timeframe.getGrid().getCells().keySet()) {
+        for (Integer cellId : frame.getTimeframe().getGrid().getCells().keySet()) {
             GridCell gridCell = FrameGenerator.gridSchema.get(cellId);
             if (gridCell.getXLo() < xLoBorder || gridCell.getXHi() < xLoBorder
                     || xHiBorder < gridCell.getXLo() || xHiBorder < gridCell.getXHi()) {
@@ -318,7 +318,7 @@ public class MainCanvas extends Canvas {
         int surfX1 = (int) ((canvasX - Config.shiftBoxX) / Config.multiplayer * 1000) / 5 * 5 + 5;
         float surfY = (float) ((canvasY - Config.shiftBoxY) / Config.multiplayer * 1000) / 5 * 5 / 1000;
         int surfY2 = (int) (surfY / Config.spartaCellSize);
-        FrameGenerator.Frame frame = FrameGenerator.getFrameGenerator().getFrame(0);
+        FrameGenerator.Frame frame = FrameGenerator.frameGenerator.getFrame(0);
 
         int countCells = 0;
         int countCellsWithValue = 0;
@@ -326,7 +326,7 @@ public class MainCanvas extends Canvas {
         float cellSumValue = 0f;
         if (FrameGenerator.inSurfSchema.containsKey(surfX)) {
             Map<Integer, GridCell> cellIds = FrameGenerator.inSurfSchema.get(surfX);
-            Map<Integer, Float[]> frameCells = frame.timeframe.getGrid().getCells();
+            Map<Integer, Float[]> frameCells = frame.getTimeframe().getGrid().getCells();
 
             countCells = cellIds.size();
             for (GridCell gridCell : cellIds.values()) {
@@ -402,7 +402,7 @@ public class MainCanvas extends Canvas {
             if (FrameGenerator.gridSchemaRevert.containsKey(surfX2) &&
                     FrameGenerator.gridSchemaRevert.get(surfX2).containsKey(surfY2)) {
                 int cellId = FrameGenerator.gridSchemaRevert.get(surfX2).get(surfY2);
-                Map<Integer, Float[]> frameCells = frame.timeframe.getGrid().getCells();
+                Map<Integer, Float[]> frameCells = frame.getTimeframe().getGrid().getCells();
 
                 if (frameCells.containsKey(cellId)) {
                     if (curColorizeType == ColorizeType.DENSITY_STATIC) {

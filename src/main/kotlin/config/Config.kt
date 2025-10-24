@@ -3,10 +3,12 @@ package config
 const val DEBUG_DRAWING = true // debug flag
 const val MAX_BOX_X: Int = 1500 // максимальная высота расчетной области (в точках)
 const val MAX_BOX_Y: Int = 700 // максимальная ширина расчетной области (в точках)
-const val PARSE_POINTS = false
 
 class Config {
     companion object {
+        @JvmField
+        var PARSE_POINTS = false
+
         @JvmField
         var shapeX: Float = 10f // высота расчетной области (в см)
         @JvmField
