@@ -292,7 +292,7 @@ class MainCanvas : Canvas() {
 
         Config.shiftBoxY = (MAX_BOX_Y - Config.mainBoxY) / 2
 
-        EventBusFactory.getEventBus().post(DrawEvent(0))
+        EventBusFactory.eventBus.post(DrawEvent(0))
     }
 
     var canvasOnMousePressedEventHandler: EventHandler<MouseEvent> = EventHandler { mouseEvent ->
@@ -308,7 +308,7 @@ class MainCanvas : Canvas() {
 
     var canvasOnMouseReleasedEventHandler: EventHandler<MouseEvent> = EventHandler { mouseEvent ->
         if (mouseEvent.button == MouseButton.SECONDARY) {
-            EventBusFactory.getEventBus().post(DrawEvent(0))
+            EventBusFactory.eventBus.post(DrawEvent(0))
         }
     }
 
@@ -318,7 +318,7 @@ class MainCanvas : Canvas() {
             val offsetY = mouseEvent.sceneY - animatedCanvasY
             Config.shiftBoxX = originalShiftX + offsetX.toInt()
             Config.shiftBoxY = originalShiftY + offsetY.toInt()
-            EventBusFactory.getEventBus().post(DrawEvent(0))
+            EventBusFactory.eventBus.post(DrawEvent(0))
         }
     }
 
@@ -501,6 +501,6 @@ class MainCanvas : Canvas() {
         gc.fill = Color.WHITE
         gc.fillText(text, canvasX - (text.length.toFloat() * 5 / 2), 15.0)
 
-        EventBusFactory.getEventBus().post(DrawDensityEvent(surfX.toFloat() / 1000))
+        EventBusFactory.eventBus.post(DrawDensityEvent(surfX.toFloat() / 1000))
     }
 }

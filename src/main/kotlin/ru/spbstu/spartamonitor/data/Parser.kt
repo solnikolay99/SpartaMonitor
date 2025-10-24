@@ -87,7 +87,7 @@ class Parser {
             val timeframe: Timeframe = this.parseTimeFrame(allFrames[sortedKeys[i]]!!)
             Logger.releaseTimer("Pars data to timeframe")
             timeFrames[i] = timeframe
-            EventBusFactory.getEventBus().post(ParserEvent((endFrame - startFrame), (i + 1)))
+            EventBusFactory.eventBus.post(ParserEvent((endFrame - startFrame), (i + 1)))
         }
     }
 

@@ -1,12 +1,12 @@
-package ru.spbstu.spartamonitor.listeners;
+package ru.spbstu.spartamonitor.listeners
 
-import com.google.common.eventbus.Subscribe;
-import ru.spbstu.spartamonitor.SpartaMonitorController;
-import ru.spbstu.spartamonitor.events.DrawDensityEvent;
+import com.google.common.eventbus.Subscribe
+import ru.spbstu.spartamonitor.SpartaMonitorController
+import ru.spbstu.spartamonitor.events.DrawDensityEvent
 
-public record DrawDensityListener(SpartaMonitorController controller) {
+data class DrawDensityListener(val controller: SpartaMonitorController) {
     @Subscribe
-    public void handleDrawEvent(DrawDensityEvent event) {
-        controller.drawDensityChart(event.getXCoord());
+    fun handleDrawEvent(event: DrawDensityEvent) {
+        controller.drawDensityChart(event.xCoord)
     }
 }

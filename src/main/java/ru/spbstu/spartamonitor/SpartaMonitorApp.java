@@ -32,14 +32,14 @@ public class SpartaMonitorApp extends Application {
         this.controller = fxmlLoader.getController();
         this.controller.setMainStage(stage);
 
-        EventBusFactory.getEventBus().register(new ParserListener(this.controller));
-        EventBusFactory.getEventBus().register(new DrawListener(this.controller));
-        EventBusFactory.getEventBus().register(new DrawDensityListener(this.controller));
+        EventBusFactory.eventBus.register(new ParserListener(this.controller));
+        EventBusFactory.eventBus.register(new DrawListener(this.controller));
+        EventBusFactory.eventBus.register(new DrawDensityListener(this.controller));
 
         Timeline timeline = new Timeline(
                 new KeyFrame(
                         Duration.seconds(0),
-                        event -> EventBusFactory.getEventBus().post(new DrawEvent(null))
+                        event -> EventBusFactory.eventBus.post(new DrawEvent(null))
                 ),
                 new KeyFrame(Duration.millis(drawTimeOut))
         );

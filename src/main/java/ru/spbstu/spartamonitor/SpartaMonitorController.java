@@ -185,13 +185,13 @@ public class SpartaMonitorController {
 
     @FXML
     protected void onNextIterationButtonClick() {
-        EventBusFactory.getEventBus().post(new DrawEvent(1));
+        EventBusFactory.eventBus.post(new DrawEvent(1));
         frameGenerator.startOneIteration();
     }
 
     @FXML
     protected void onPrevIterationButtonClick() {
-        EventBusFactory.getEventBus().post(new DrawEvent(-1));
+        EventBusFactory.eventBus.post(new DrawEvent(-1));
         frameGenerator.startOneIteration();
     }
 
@@ -203,7 +203,7 @@ public class SpartaMonitorController {
         buttonStop.setDisable(false);
         buttonPrevStep.setDisable(true);
         buttonNextStep.setDisable(true);
-        EventBusFactory.getEventBus().post(new DrawEvent(1));
+        EventBusFactory.eventBus.post(new DrawEvent(1));
         frameGenerator.startIterations();
     }
 
@@ -215,7 +215,7 @@ public class SpartaMonitorController {
         buttonStop.setDisable(false);
         buttonPrevStep.setDisable(true);
         buttonNextStep.setDisable(true);
-        EventBusFactory.getEventBus().post(new DrawEvent(-1));
+        EventBusFactory.eventBus.post(new DrawEvent(-1));
         frameGenerator.startIterations();
     }
 
@@ -264,13 +264,13 @@ public class SpartaMonitorController {
             case 12 -> colorizeType = ColorizeType.NRHO_DULOV;
         }
         graduationCanvas.colorize(colorizeType);
-        EventBusFactory.getEventBus().post(new DrawEvent(0));
+        EventBusFactory.eventBus.post(new DrawEvent(0));
     }
 
     @FXML
     protected void onDrawTypeChange() {
         drawByPoints = !switchDrawPointsOrCells.isSelected();
-        EventBusFactory.getEventBus().post(new DrawEvent(0));
+        EventBusFactory.eventBus.post(new DrawEvent(0));
     }
 
     @FXML

@@ -1,12 +1,12 @@
-package ru.spbstu.spartamonitor.listeners;
+package ru.spbstu.spartamonitor.listeners
 
-import com.google.common.eventbus.Subscribe;
-import ru.spbstu.spartamonitor.SpartaMonitorController;
-import ru.spbstu.spartamonitor.events.ParserEvent;
+import com.google.common.eventbus.Subscribe
+import ru.spbstu.spartamonitor.SpartaMonitorController
+import ru.spbstu.spartamonitor.events.ParserEvent
 
-public record ParserListener(SpartaMonitorController controller) {
+data class ParserListener(val controller: SpartaMonitorController) {
     @Subscribe
-    public void handleParserEvent(ParserEvent event) {
-        controller.currentFrameNumber.setText(String.format("%d", event.getCountFrames()));
+    fun handleParserEvent(event: ParserEvent) {
+        controller.currentFrameNumber.text = event.countFrames.toString()
     }
 }
