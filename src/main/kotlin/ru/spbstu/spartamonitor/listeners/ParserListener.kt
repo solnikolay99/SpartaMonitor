@@ -7,6 +7,6 @@ import ru.spbstu.spartamonitor.events.ParserEvent
 data class ParserListener(val controller: SpartaMonitorController) {
     @Subscribe
     fun handleParserEvent(event: ParserEvent) {
-        controller.currentFrameNumber.text = event.countFrames.toString()
+        controller.currentFrameNumber?.text = event.countFrames.toString()
     }
 }
