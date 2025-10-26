@@ -7,14 +7,12 @@ import javafx.scene.chart.Axis
 import javafx.scene.chart.LineChart
 import ru.spbstu.spartamonitor.calculate.Calculation
 import ru.spbstu.spartamonitor.colorize.ColorizeType
+import ru.spbstu.spartamonitor.colorize.ColorizeType.*
 import ru.spbstu.spartamonitor.data.FrameGenerator
-import ru.spbstu.spartamonitor.data.models.GridCell
-import java.math.BigDecimal
-import java.util.*
 import kotlin.math.max
 
 class DensityChart : LineChart<String, Number> {
-    private var curColorizeType: ColorizeType = ColorizeType.DENSITY_STATIC
+    private var curColorizeType: ColorizeType = DENSITY_STATIC
 
     constructor(
         @NamedArg("xAxis") xAxis: Axis<String>,
@@ -32,7 +30,7 @@ class DensityChart : LineChart<String, Number> {
             this.data.clear()
             curColorizeType = colorizeType
         }
-        if (colorizeType == ColorizeType.DENSITY_STATIC_DIF || colorizeType == ColorizeType.DENSITY_DYNAMIC_DIF || colorizeType == ColorizeType.NRHO_DIF) {
+        if (colorizeType == DENSITY_STATIC_DIF || colorizeType == DENSITY_DYNAMIC_DIF || colorizeType == NRHO_DIF) {
             showDulovDiffData(frame)
         } else {
             showTargetData(frame)
@@ -40,11 +38,11 @@ class DensityChart : LineChart<String, Number> {
     }
 
     private fun getDulovData(cellId: Int): Float? {
-        if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF || curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
+        if (curColorizeType == DENSITY_STATIC_DIF || curColorizeType == DENSITY_DYNAMIC_DIF) {
             if (FrameGenerator.dulovsPressureData.containsKey(cellId)) {
                 return FrameGenerator.dulovsPressureData[cellId]
             }
-        } else if (curColorizeType == ColorizeType.NRHO_DIF) {
+        } else if (curColorizeType == NRHO_DIF) {
             if (FrameGenerator.dulovsNConcentrationData.containsKey(cellId)) {
                 return FrameGenerator.dulovsNConcentrationData[cellId]
             }
@@ -54,15 +52,15 @@ class DensityChart : LineChart<String, Number> {
 
     private fun getCellValue(frame: FrameGenerator.Frame, cellId: Int): Float {
         return when (curColorizeType) {
-            ColorizeType.DENSITY_STATIC_DIF -> {
+            DENSITY_STATIC_DIF -> {
                 frame.timeframe!!.grid.cells[cellId]!![0]
             }
 
-            ColorizeType.DENSITY_DYNAMIC_DIF -> {
+            DENSITY_DYNAMIC_DIF -> {
                 frame.timeframe!!.grid.cells[cellId]!![7]
             }
 
-            ColorizeType.NRHO_DIF -> {
+            NRHO_DIF -> {
                 frame.timeframe!!.grid.cells[cellId]!![6]
             }
 
@@ -73,7 +71,7 @@ class DensityChart : LineChart<String, Number> {
     }
 
     fun showDulovDiffData(frame: FrameGenerator.Frame) {
-        val dulovData = HashMap<Int, Float>()
+        val dulovData = mutableMapOf<Int, Float>()
 
         val minX = FrameGenerator.gridSchema[FrameGenerator.dulovsPressureData.keys.min()]!!.xLo
         val maxX = FrameGenerator.gridSchema[FrameGenerator.dulovsPressureData.keys.min()]!!.xLo
@@ -83,9 +81,9 @@ class DensityChart : LineChart<String, Number> {
 
         this.data.clear()
 
-        if (curColorizeType == ColorizeType.DENSITY_STATIC_DIF || curColorizeType == ColorizeType.DENSITY_DYNAMIC_DIF) {
+        if (curColorizeType == DENSITY_STATIC_DIF || curColorizeType == DENSITY_DYNAMIC_DIF) {
             for (cellId in frame.timeframe!!.grid.cells.keys) {
-                val gridCell: GridCell = FrameGenerator.gridSchema[cellId]!!
+                val gridCell = FrameGenerator.gridSchema[cellId]!!
                 if (gridCell.xLo !in minX..maxX) {
                     continue
                 }
@@ -93,9 +91,9 @@ class DensityChart : LineChart<String, Number> {
                     dulovData[cellId] = gridCell.xLo
                 }
             }
-        } else if (curColorizeType == ColorizeType.NRHO_DIF) {
+        } else if (curColorizeType == NRHO_DIF) {
             for (cellId in frame.timeframe!!.grid.cells.keys) {
-                val gridCell: GridCell = FrameGenerator.gridSchema[cellId]!!
+                val gridCell = FrameGenerator.gridSchema[cellId]!!
                 if (gridCell.xLo <= dulovXLine!! && dulovXLine!! < gridCell.xHi) {
                     dulovData[cellId] = gridCell.yLo
                 }
@@ -104,10 +102,9 @@ class DensityChart : LineChart<String, Number> {
 
         val series1 = Series<String, Number>()
         val series2 = Series<String, Number>()
-        val countSteps = if (curColorizeType == ColorizeType.NRHO_DIF) dulovData.size else 100
-        val stepSize = if (curColorizeType == ColorizeType.NRHO_DIF) 10 else 1
-        val dulovCells = dulovData.keys.toList()
-        dulovCells.sortedBy { it }
+        val countSteps = if (curColorizeType == NRHO_DIF) dulovData.size else 100
+        val stepSize = if (curColorizeType == NRHO_DIF) 10 else 1
+        val dulovCells = dulovData.keys.toList().sorted()
         var i = 0
         while (i < countSteps) {
             val dulovValue = getDulovData(dulovCells[i])
@@ -121,11 +118,11 @@ class DensityChart : LineChart<String, Number> {
             )
             series1.getData().add(
                 Data(
-                    dulovData.get(dulovCells[i]).toString(),
-                    Objects.requireNonNullElse(dulovValue, 0)
+                    dulovData[dulovCells[i]].toString(),
+                    dulovValue ?: 0
                 )
             )
-            series2.getData().add(Data(dulovData.get(dulovCells[i]).toString(), originalValue))
+            series2.getData().add(Data(dulovData[dulovCells[i]].toString(), originalValue))
             i += stepSize
         }
         this.data.add(series1)
@@ -133,15 +130,15 @@ class DensityChart : LineChart<String, Number> {
 
         if (!dulovData.isEmpty()) {
             when (curColorizeType) {
-                ColorizeType.DENSITY_STATIC_DIF -> {
+                DENSITY_STATIC_DIF -> {
                     this.title = String.format("График среза по давлению%n для y = %.4f см", dulovYLine)
                 }
 
-                ColorizeType.DENSITY_DYNAMIC_DIF -> {
+                DENSITY_DYNAMIC_DIF -> {
                     this.title = String.format("График среза по полному давлению%n для y = %.4f см", dulovYLine)
                 }
 
-                ColorizeType.NRHO_DIF -> {
+                NRHO_DIF -> {
                     this.title = String.format("График среза по концентрации%n для х = %.4f см", dulovXLine)
                 }
 
@@ -156,8 +153,8 @@ class DensityChart : LineChart<String, Number> {
         var targetPoints = 0
         var totalPoints = 0
         var targetDiameter = 0f
-        var outTotalPoints = BigDecimal(0)
-        var outTargetPoints = BigDecimal(0)
+        var outTotalPoints = 0.toBigDecimal()
+        var outTargetPoints = 0.toBigDecimal()
 
         if (this.data.isEmpty()) {
             frame.timeframe!!.target
@@ -188,7 +185,7 @@ class DensityChart : LineChart<String, Number> {
                 var maxY = 0
                 val diameter = Calculation().calculateTargetDiameter(frame.timeframe!!, 0.5f)
 
-                for (i in frame.timeframe!!.target.indices) {
+                frame.timeframe!!.target.indices.forEach { i ->
                     val element = this.data[0].getData()[i]
                     element.setYValue(frame.timeframe!!.target[i])
                     maxY = max(maxY, frame.timeframe!!.target[i])
@@ -215,9 +212,9 @@ class DensityChart : LineChart<String, Number> {
         if (frame.timeframe != null) {
             totalPoints = frame.timeframe!!.countPoints
             outTotalPoints =
-                BigDecimal(Config.globalParams["fnum"]).multiply(BigDecimal.valueOf(totalPoints.toLong()))
+                (Config.globalParams["fnum"] ?: "0").toBigDecimal().multiply(totalPoints.toBigDecimal())
             outTargetPoints =
-                BigDecimal(Config.globalParams["fnum"]).multiply(BigDecimal.valueOf(targetPoints.toLong()))
+                (Config.globalParams["fnum"] ?: "0").toBigDecimal().multiply(targetPoints.toBigDecimal())
         }
 
         this.title = String.format(
