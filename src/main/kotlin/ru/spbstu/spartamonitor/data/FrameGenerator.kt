@@ -174,16 +174,16 @@ class FrameGenerator : Runnable {
     }
 
     private fun excludeOutSurfGridCells() {
-        val surfBorders: MutableList<FloatArray> = ArrayList<FloatArray>()
-        val excludedAreas: MutableList<java.awt.Polygon> = ArrayList<java.awt.Polygon>()
-        for (surf in surfs.values) {
+        val surfBorders: MutableList<FloatArray> = mutableListOf()
+        val excludedAreas: MutableList<java.awt.Polygon> = mutableListOf()
+        surfs.values.forEach { surf ->
             val borders = floatArrayOf(
                 Float.MAX_VALUE,
                 Float.MAX_VALUE,
                 Float.MIN_VALUE,
                 Float.MIN_VALUE
             )
-            for (polygon in surf) {
+            surf.forEach { polygon ->
                 val polygonBorders = polygon.borderPoints
 
                 if (polygonBorders[0] < borders[0]) {
@@ -208,9 +208,9 @@ class FrameGenerator : Runnable {
             surfBorders.add(borders)
         }
 
-        for (cellId in gridSchema.keys) {
+        gridSchema.keys.forEach { cellId ->
             val gridCell: GridCell = gridSchema[cellId]!!
-            for (borders in surfBorders) {
+            surfBorders.forEach { borders ->
                 if (gridCell.xLo >= borders[0] && gridCell.xLo <= borders[2]
                     && gridCell.yLo >= borders[1] && gridCell.yLo <= borders[3]
                     && gridCell.xHi >= borders[0] && gridCell.xHi <= borders[2]
@@ -223,16 +223,10 @@ class FrameGenerator : Runnable {
                         ((gridCell.yHi - gridCell.yLo) * 1000).toInt()
                     )
 
-                    var flgGridPolygonInside = false
                     for (excludedArea in excludedAreas) {
                         if (excludedArea.contains(gridPolygon)) {
-                            flgGridPolygonInside = true
-                            break
+                            return@forEach
                         }
-                    }
-
-                    if (flgGridPolygonInside) {
-                        continue
                     }
 
                     if (!inSurfSchema.containsKey((gridCell.xLo * 1000).toInt())) {

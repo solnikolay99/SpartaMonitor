@@ -14,6 +14,12 @@ import java.nio.file.Paths
 import kotlin.io.path.pathString
 import kotlin.math.*
 
+/**
+ * Constants
+ */
+const val GAMMA: Float = 5f / 3f    // показатель адиабаты
+const val R: Float = 2077f          // универсальная газовая постоянная для He (в Дж / (кг * К))
+
 class Parser {
 
     private var dumpDir: String = ""
@@ -24,12 +30,6 @@ class Parser {
     private val influxFilePattern: String = "(.*influx_sum.)([0-9]+)(.txt)"
     private val targetFilePattern: String = "(.*target_sum.)([0-9]+)(.txt)"
     private val allFrames: MutableMap<Int, Array<Path?>> = mutableMapOf()
-
-    /**
-     * Constants
-     */
-    private val gamma: Float = 5f / 3f  // показатель адиабаты
-    private val rR: Float = 2077f       // универсальная газовая постоянная для He (в Дж / (кг * К))
 
     fun setDumpDir(dumpDir: String) {
         this.dumpDir = dumpDir
@@ -84,9 +84,8 @@ class Parser {
         val sortedKeys = allFrames.keys.stream().sorted().toList()
         for (i in startFrame until min(endFrame, sortedKeys.size)) {
             Logger.startTimer("Pars data to timeframe")
-            val timeframe: Timeframe = this.parseTimeFrame(allFrames[sortedKeys[i]]!!)
+            timeFrames[i] = this.parseTimeFrame(allFrames[sortedKeys[i]]!!)
             Logger.releaseTimer("Pars data to timeframe")
-            timeFrames[i] = timeframe
             EventBusFactory.eventBus.post(ParserEvent((endFrame - startFrame), (i + 1)))
         }
     }
@@ -115,7 +114,7 @@ class Parser {
 
     private fun parsePoints(filePath: Path): MutableList<Array<Number>> {
         val fileLines = Files.readAllLines(filePath)
-        val points = ArrayList<Array<Number>>()
+        val points = mutableListOf<Array<Number>>()
 
         val headers = fileLines[8].replace("ITEM: ATOMS ", "").trim().split(" ")
         val xIndex = headers.indexOf("x")
@@ -128,8 +127,8 @@ class Parser {
             points.add(
                 arrayOf(
                     params[idIndex].toInt(),
-                    if (Config.unitSystemCGS) params[xIndex].toFloat() else params[xIndex].toFloat() * 100,
-                    if (Config.unitSystemCGS) params[yIndex].toFloat() else params[yIndex].toFloat() * 100,
+                    params[xIndex].toFloat() * Config.unitSystemMultiplier,
+                    params[yIndex].toFloat() * Config.unitSystemMultiplier,
                     params[cellIdIndex].toInt()
                 )
             )
@@ -158,8 +157,8 @@ class Parser {
         for (i in 9 until fileLines.size) {
             val params = fileLines[i].split(" ")
             val temperature = params[tIndex].toFloat()
-            val cs = sqrt(gamma * rR * temperature)
-            val u = abs(params[vIndex].toFloat() / (if (Config.unitSystemCGS) 100 else 1))
+            val cs = sqrt(GAMMA * R * temperature)
+            val u = abs(params[vIndex].toFloat() / Config.unitSystemMultiplier)
             val nrho = if (nrhoIndex == -1) 0f else params[nrhoIndex].toFloat()
             val pDynamic =
                 if (keIndex == -1 || nrhoIndex == -1) 0f
@@ -200,7 +199,7 @@ class Parser {
 
     private fun parseTarget(filePath: Path): MutableList<Int> {
         val fileLines = Files.readAllLines(filePath)
-        val bars = mutableListOf<Int>()
+        val bars: MutableList<Int> = mutableListOf()
 
         fileLines.forEach { fileLine ->
             val params = fileLine.split(" ")
@@ -222,50 +221,53 @@ class Parser {
                 .replace(" +".toRegex(), " ")
                 .trim()
                 .split(" ")
+                .map { it.trim() }
             if (params.isEmpty()) {
                 return@forEach
             }
             if (params[0].startsWith("#")) {
                 return@forEach
             }
-            when (params[0].trim()) {
+            when (params[0]) {
                 "global" -> {
                     for (i in 1 until params.size step 2) {
-                        Config.globalParams[params[i].trim()] = params[i + 1].trim()
+                        Config.globalParams[params[i]] = params[i + 1]
                     }
                 }
 
-                "units" -> Config.unitSystemCGS = params[1].trim() == "cgs"
-                "timestep" -> Config.tStep = params[1].trim().toFloat()
+                "units" -> {
+                    Config.unitSystemCGS = params[1] == "cgs"
+                    Config.unitSystemMultiplier = if (Config.unitSystemCGS) 100 else 1
+                }
+
+                "timestep" -> Config.tStep = params[1].toFloat()
                 "create_box" -> {
-                    Config.shapeX = params[2].trim().toFloat() - params[1].trim().toFloat()
-                    Config.shapeX = if (Config.unitSystemCGS) Config.shapeX else Config.shapeX * 100
-                    Config.shapeY = params[4].trim().toFloat() - params[3].trim().toFloat()
-                    Config.shapeY = if (Config.unitSystemCGS) Config.shapeY else Config.shapeY * 100
+                    Config.shapeX = (params[2].toDouble() - params[1].toDouble()) * Config.unitSystemMultiplier
+                    Config.shapeY = (params[4].toDouble() - params[3].toDouble()) * Config.unitSystemMultiplier
                 }
 
                 "create_grid" -> {
-                    Config.spartaCellSize = Config.shapeX / params[1].trim().toInt()
+                    Config.spartaCellSize = Config.shapeX / params[1].toInt()
                     Config.monitorCellSizeX = Config.shapeX / MAX_BOX_X
                     Config.monitorCellSizeY = Config.shapeY / MAX_BOX_Y
                     val coeffX = MAX_BOX_X / Config.shapeX
                     val coeffY = MAX_BOX_Y / Config.shapeY
-                    Config.defaultMultiplayer = min(coeffX, coeffY).toInt()
+                    Config.defaultMultiplier = min(coeffX, coeffY)
                     if (coeffX < coeffY) {
-                        Config.defaultBoxY = (Config.shapeY * Config.defaultMultiplayer).toInt()
+                        Config.defaultBoxY = (Config.shapeY * Config.defaultMultiplier).toInt()
                         Config.shiftBoxY =
                             if (Config.defaultBoxY > MAX_BOX_Y) (MAX_BOX_Y - Config.defaultBoxY) / 2 else 0
                     } else {
-                        Config.defaultBoxX = (Config.shapeX * Config.defaultMultiplayer).toInt()
+                        Config.defaultBoxX = (Config.shapeX * Config.defaultMultiplier).toInt()
                         Config.shiftBoxX =
                             if (Config.defaultBoxX > MAX_BOX_X) (MAX_BOX_X - Config.defaultBoxX) / 2 else 0
                     }
-                    Config.multiplayer = Config.defaultMultiplayer
+                    Config.multiplier = Config.defaultMultiplier
                     Config.mainBoxX = Config.defaultBoxX
                     Config.mainBoxY = Config.defaultBoxY
                 }
 
-                "read_surf" -> Config.surfFiles.add(params[1].trim())
+                "read_surf" -> Config.surfFiles.add(params[1])
             }
         }
     }
@@ -281,8 +283,8 @@ class Parser {
 
         for (i in 7 until 7 + countPoints) {
             val pointElements = fileLines[i].split(" ")
-            val point1 = if (Config.unitSystemCGS) pointElements[1].toFloat() else pointElements[1].toFloat() * 100
-            val point2 = if (Config.unitSystemCGS) pointElements[2].toFloat() else pointElements[2].toFloat() * 100
+            val point1 = pointElements[1].toFloat() * Config.unitSystemMultiplier
+            val point2 = pointElements[2].toFloat() * Config.unitSystemMultiplier
             points.add(Point(point1, point2))
         }
 
@@ -316,7 +318,7 @@ class Parser {
      * @return - Map with keys 'y : x - id'
      */
     fun parsGridSchema(fileName: Path): MutableMap<Int, GridCell> {
-        val gridSchema = mutableMapOf<Int, GridCell>()
+        val gridSchema: MutableMap<Int, GridCell> = mutableMapOf()
 
         val fileLines = Files.readAllLines(fileName)
 
@@ -332,10 +334,10 @@ class Parser {
             val cellId = params[idIndex].toInt()
             gridSchema[cellId] = GridCell(
                 cellId,
-                if (Config.unitSystemCGS) params[xLoIndex].toFloat() else params[xLoIndex].toFloat() * 100,
-                if (Config.unitSystemCGS) params[yLoIndex].toFloat() else params[yLoIndex].toFloat() * 100,
-                if (Config.unitSystemCGS) params[xHiIndex].toFloat() else params[xHiIndex].toFloat() * 100,
-                if (Config.unitSystemCGS) params[yHiIndex].toFloat() else params[yHiIndex].toFloat() * 100
+                params[xLoIndex].toFloat() * Config.unitSystemMultiplier,
+                params[yLoIndex].toFloat() * Config.unitSystemMultiplier,
+                params[xHiIndex].toFloat() * Config.unitSystemMultiplier,
+                params[yHiIndex].toFloat() * Config.unitSystemMultiplier
             )
         }
 
@@ -343,9 +345,9 @@ class Parser {
     }
 
     fun revertGridSchema(gridSchema: Map<Int, GridCell>): MutableMap<Int, MutableMap<Int, Int>> {
-        val revertedGridSchema = mutableMapOf<Int, MutableMap<Int, Int>>()
+        val revertedGridSchema: MutableMap<Int, MutableMap<Int, Int>> = mutableMapOf()
 
-        for (key in gridSchema.keys) {
+        gridSchema.keys.forEach { key ->
             val xKey = round(gridSchema[key]!!.xLo / Config.spartaCellSize).toInt()
             val yKey = round(gridSchema[key]!!.yLo / Config.spartaCellSize).toInt()
             if (!revertedGridSchema.containsKey(xKey)) {
@@ -360,12 +362,7 @@ class Parser {
     private fun getGridId(revertedGridSchema: Map<Int, Map<Int, Int>>, xCoord: Float, yCoord: Float): Int? {
         val xKey = round(xCoord / Config.spartaCellSize).toInt()
         val yKey = round(yCoord / Config.spartaCellSize).toInt()
-        if (revertedGridSchema.containsKey(xKey)) {
-            if (revertedGridSchema[xKey]!!.containsKey(yKey)) {
-                return revertedGridSchema[xKey]!![yKey]
-            }
-        }
-        return null
+        return revertedGridSchema[xKey]?.get(yKey)
     }
 
     fun parseDulovsData(
@@ -374,8 +371,8 @@ class Parser {
         yFileName: Path,
         gridSchemaRevert: Map<Int, Map<Int, Int>>
     ): Map<Int, Float> {
-        val mappedData = mutableMapOf<Int, Float>()
-        val data = mutableListOf<List<Float>>()
+        val mappedData: MutableMap<Int, Float> = mutableMapOf()
+        val data: MutableList<List<Float>> = mutableListOf()
 
         if (Files.exists(dataFileName) && Files.exists(xFileName) && Files.exists(yFileName)) {
             val xFileLines = Files.readAllLines(xFileName)

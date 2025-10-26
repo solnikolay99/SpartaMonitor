@@ -16,7 +16,7 @@ class GraduationCanvas : Canvas() {
 
         gc.clearRect(0.0, 0.0, this.width, this.height)
 
-        for (i in colorSchema.indices) {
+        colorSchema.indices.forEach { i ->
             gc.fill = colorSchema[i]
             gc.fillRect(colorStep * i, 40.0, colorStep, 40.0)
         }
@@ -41,7 +41,7 @@ class GraduationCanvas : Canvas() {
         }
 
         gc.fillText(
-            String.format("%s, %s", graduation.label, graduation.units),
+            "${graduation.label}, ${graduation.units}",
             (countTextSteps * textStep) / 2 - 40,
             10.0
         )

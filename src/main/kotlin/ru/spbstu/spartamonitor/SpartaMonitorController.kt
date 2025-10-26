@@ -21,7 +21,6 @@ import ru.spbstu.spartamonitor.logger.Logger.releaseTimer
 import ru.spbstu.spartamonitor.logger.Logger.startTimer
 import ru.spbstu.spartamonitor.screener.Screener
 import ru.spbstu.spartamonitor.screener.Screener.combineFullScene
-import java.awt.Toolkit
 import java.awt.image.RenderedImage
 import java.nio.file.Path
 import javax.imageio.ImageIO
@@ -38,58 +37,58 @@ class SpartaMonitorController {
     var drawByPoints = true
 
     @FXML
-    var buttonSaveAsPicture: Button? = null
+    lateinit var buttonSaveAsPicture: Button
 
     @FXML
-    var buttonInit: Button? = null
+    lateinit var buttonInit: Button
 
     @FXML
-    var buttonForward: Button? = null
+    lateinit var buttonForward: Button
 
     @FXML
-    var buttonBackward: Button? = null
+    lateinit var buttonBackward: Button
 
     @FXML
-    var buttonStop: Button? = null
+    lateinit var buttonStop: Button
 
     @FXML
-    var buttonPrevStep: Button? = null
+    lateinit var buttonPrevStep: Button
 
     @FXML
-    var buttonNextStep: Button? = null
+    lateinit var buttonNextStep: Button
 
     @FXML
-    var animationCanvas: MainCanvas? = null
+    lateinit var animationCanvas: MainCanvas
 
     @FXML
-    var graduationCanvas: GraduationCanvas? = null
+    lateinit var graduationCanvas: GraduationCanvas
 
     @FXML
-    var densityChart: DensityChart? = null
+    lateinit var densityChart: DensityChart
 
     @FXML
-    var textDumpFolder: TextField? = null
+    lateinit var textDumpFolder: TextField
 
     @FXML
-    var buttonDumpFolder: Button? = null
+    lateinit var buttonDumpFolder: Button
 
     @FXML
-    var selectColorizeType: ComboBox<String>? = null
+    lateinit var selectColorizeType: ComboBox<String>
 
     @FXML
-    var startFrameNumber: TextField? = null
+    lateinit var startFrameNumber: TextField
 
     @FXML
-    var endFrameNumber: TextField? = null
+    lateinit var endFrameNumber: TextField
 
     @FXML
-    var currentFrameNumber: TextField? = null
+    lateinit var currentFrameNumber: TextField
 
     @FXML
-    var switchDrawPointsOrCells: ToggleSwitch? = null
+    lateinit var switchDrawPointsOrCells: ToggleSwitch
 
     @FXML
-    var buttonDumpDulov: Button? = null
+    lateinit var buttonDumpDulov: Button
 
     init {
         this.fgThread.start()
@@ -98,19 +97,19 @@ class SpartaMonitorController {
     fun setStageMain(stage: Stage) {
         this.mainStage = stage
 
-        selectColorizeType!!.getSelectionModel().select(0)
+        selectColorizeType.getSelectionModel().select(0)
         if (!Config.PARSE_POINTS) {
             drawByPoints = Config.PARSE_POINTS
-            switchDrawPointsOrCells!!.isSelected = true
-            switchDrawPointsOrCells!!.isDisable = true
+            switchDrawPointsOrCells.isSelected = true
+            switchDrawPointsOrCells.isDisable = true
         }
     }
 
     fun loadConfig() {
-        Config.dumpDirPath = textDumpFolder!!.text
+        Config.dumpDirPath = textDumpFolder.text
     }
 
-    fun showAlert(title: String?, header: String?, message: String?) {
+    fun showAlert(title: String, header: String, message: String) {
         val alert = Alert(Alert.AlertType.ERROR)
         alert.title = title
         alert.headerText = header
@@ -123,7 +122,7 @@ class SpartaMonitorController {
         loadConfig()
 
         try {
-            frameGenerator.setDumpDir(this.textDumpFolder!!.text)
+            frameGenerator.setDumpDir(this.textDumpFolder.text)
         } catch (_: Exception) {
             showAlert(
                 "Проблема с файлами дампов",
@@ -145,7 +144,7 @@ class SpartaMonitorController {
         }
 
         try {
-            frameGenerator.loadSurfs(Path.of(this.textDumpFolder!!.text))
+            frameGenerator.loadSurfs(Path.of(this.textDumpFolder.text))
         } catch (_: Exception) {
             showAlert(
                 "Проблема с загрузкой файла(-ов) поверхностей",
@@ -156,7 +155,7 @@ class SpartaMonitorController {
         }
 
         try {
-            frameGenerator.loadGrid(Path.of(this.textDumpFolder!!.text))
+            frameGenerator.loadGrid(Path.of(this.textDumpFolder.text))
         } catch (_: Exception) {
             showAlert(
                 "Проблема с загрузкой файла расчётной сетки",
@@ -167,7 +166,7 @@ class SpartaMonitorController {
         }
 
         try {
-            frameGenerator.loadDulovsData(Path.of(this.textDumpFolder!!.text))
+            frameGenerator.loadDulovsData(Path.of(this.textDumpFolder.text))
         } catch (_: Exception) {
             showAlert(
                 "Проблема с загрузкой файла скейлинга Дулова",
@@ -178,19 +177,19 @@ class SpartaMonitorController {
             return
         }
 
-        animationCanvas!!.drawMask(frameGenerator)
-        graduationCanvas!!.colorize(ColorizeType.DENSITY_STATIC)
+        animationCanvas.drawMask(frameGenerator)
+        graduationCanvas.colorize(ColorizeType.DENSITY_STATIC)
 
         frameGenerator.preloadTimeFrames(
-            this.startFrameNumber!!.text.toInt(),
-            this.endFrameNumber!!.text.toInt()
+            this.startFrameNumber.text.toInt(),
+            this.endFrameNumber.text.toInt()
         )
 
-        buttonBackward!!.isDisable = false
-        buttonForward!!.isDisable = false
-        buttonStop!!.isDisable = true
-        buttonPrevStep!!.isDisable = false
-        buttonNextStep!!.isDisable = false
+        buttonBackward.isDisable = false
+        buttonForward.isDisable = false
+        buttonStop.isDisable = true
+        buttonPrevStep.isDisable = false
+        buttonNextStep.isDisable = false
     }
 
     @FXML
@@ -201,12 +200,12 @@ class SpartaMonitorController {
         val file = fileChooser.showSaveDialog(this.mainStage)
 
         try {
-            val mainImage = Screener.getImageFromCanvas(animationCanvas!!)
-            val graduationImage = Screener.getImageFromCanvas(graduationCanvas!!)
-            val chartImage = Screener.getImageFromCanvas(densityChart!!)
+            val mainImage = Screener.getImageFromCanvas(animationCanvas)
+            val graduationImage = Screener.getImageFromCanvas(graduationCanvas)
+            val chartImage = Screener.getImageFromCanvas(densityChart)
             val outImage: RenderedImage = combineFullScene(mainImage, graduationImage, chartImage)
             ImageIO.write(outImage, "png", file)
-            System.out.printf("Screen saved to '%s'%n", file.absolutePath)
+            println("Screen saved to '${file.absolutePath}'")
         } catch (_: Exception) {
         }
     }
@@ -225,24 +224,24 @@ class SpartaMonitorController {
 
     @FXML
     fun onForwardIterationsButtonClick() {
-        buttonInit!!.isDisable = true
-        buttonBackward!!.isDisable = true
-        buttonForward!!.isDisable = true
-        buttonStop!!.isDisable = false
-        buttonPrevStep!!.isDisable = true
-        buttonNextStep!!.isDisable = true
+        buttonInit.isDisable = true
+        buttonBackward.isDisable = true
+        buttonForward.isDisable = true
+        buttonStop.isDisable = false
+        buttonPrevStep.isDisable = true
+        buttonNextStep.isDisable = true
         EventBusFactory.eventBus.post(DrawEvent(1))
         frameGenerator.startIterations()
     }
 
     @FXML
     fun onBackwardIterationsButtonClick() {
-        buttonInit!!.isDisable = true
-        buttonBackward!!.isDisable = true
-        buttonForward!!.isDisable = true
-        buttonStop!!.isDisable = false
-        buttonPrevStep!!.isDisable = true
-        buttonNextStep!!.isDisable = true
+        buttonInit.isDisable = true
+        buttonBackward.isDisable = true
+        buttonForward.isDisable = true
+        buttonStop.isDisable = false
+        buttonPrevStep.isDisable = true
+        buttonNextStep.isDisable = true
         EventBusFactory.eventBus.post(DrawEvent(-1))
         frameGenerator.startIterations()
     }
@@ -250,12 +249,12 @@ class SpartaMonitorController {
     @FXML
     fun onStopIterationsButtonClick() {
         frameGenerator.stopIteration()
-        buttonInit!!.isDisable = false
-        buttonBackward!!.isDisable = false
-        buttonForward!!.isDisable = false
-        buttonStop!!.isDisable = true
-        buttonPrevStep!!.isDisable = false
-        buttonNextStep!!.isDisable = false
+        buttonInit.isDisable = false
+        buttonBackward.isDisable = false
+        buttonForward.isDisable = false
+        buttonStop.isDisable = true
+        buttonPrevStep.isDisable = false
+        buttonNextStep.isDisable = false
     }
 
     @FXML
@@ -270,13 +269,13 @@ class SpartaMonitorController {
         fileChooser.title = "Select dump dir"
         val selectedFile = fileChooser.showDialog(this.mainStage)
         if (selectedFile != null) {
-            textDumpFolder!!.text = selectedFile.absolutePath
+            textDumpFolder.text = selectedFile.absolutePath
         }
     }
 
     @FXML
     fun onColorizeTypeChange() {
-        when (selectColorizeType!!.getSelectionModel().selectedIndex) {
+        when (selectColorizeType.getSelectionModel().selectedIndex) {
             0 -> colorizeType = ColorizeType.DENSITY_STATIC
             1 -> colorizeType = ColorizeType.DENSITY_DYNAMIC
             2 -> colorizeType = ColorizeType.TEMPERATURE
@@ -291,26 +290,26 @@ class SpartaMonitorController {
             11 -> colorizeType = ColorizeType.NRHO_DIF
             12 -> colorizeType = ColorizeType.NRHO_DULOV
         }
-        graduationCanvas!!.colorize(colorizeType)
+        graduationCanvas.colorize(colorizeType)
         EventBusFactory.eventBus.post(DrawEvent(0))
     }
 
     @FXML
     fun onDrawTypeChange() {
-        drawByPoints = !switchDrawPointsOrCells!!.isSelected
+        drawByPoints = !switchDrawPointsOrCells.isSelected
         EventBusFactory.eventBus.post(DrawEvent(0))
     }
 
     @FXML
     fun onDumpDulovButtonClick() {
-        frameGenerator.saveDulovsData(Path.of(this.textDumpFolder!!.text))
+        frameGenerator.saveDulovsData(Path.of(this.textDumpFolder.text))
     }
 
     fun drawIteration(playDirection: Int) {
         if (drawIterationFinished && (frameGenerator.isRunning || frameGenerator.showOneIteration)) {
             drawIterationFinished = false
 
-            var frame: FrameGenerator.Frame?
+            var frame: FrameGenerator.Frame
             do {
                 frame = this.frameGenerator.getFrame(playDirection)
             } while (frame.timeframe == null)
@@ -320,10 +319,8 @@ class SpartaMonitorController {
             startTimer("Draw iteration")
 
             val title = String.format("%.0f мкс", (frame.frameNumber) * (Config.tStep / 1e-6 * 100))
-            animationCanvas!!.drawIteration(this.frameGenerator, frame, colorizeType, drawByPoints, title)
-            densityChart!!.drawIteration(frame, colorizeType)
-
-            Toolkit.getDefaultToolkit().sync()
+            animationCanvas.drawIteration(this.frameGenerator, frame, colorizeType, drawByPoints, title)
+            densityChart.drawIteration(frame, colorizeType)
 
             releaseTimer("Draw iteration")
 
@@ -331,15 +328,13 @@ class SpartaMonitorController {
         }
     }
 
-    fun drawDensityChart(xCoord: Float?) {
-        var frame: FrameGenerator.Frame?
+    fun drawDensityChart(xCoord: Float) {
+        var frame: FrameGenerator.Frame
         do {
             frame = this.frameGenerator.getFrame(0)
         } while (frame.timeframe == null)
 
         DensityChart.dulovXLine = xCoord
-        densityChart!!.drawIteration(frame, colorizeType)
-
-        Toolkit.getDefaultToolkit().sync()
+        densityChart.drawIteration(frame, colorizeType)
     }
 }

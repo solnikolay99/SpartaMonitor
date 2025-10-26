@@ -1,8 +1,10 @@
 package ru.spbstu.spartamonitor.calculate
 
+import ru.spbstu.spartamonitor.data.models.Timeframe
+
 class Calculation {
 
-    fun calculateTargetDiameter(timeframe : ru.spbstu.spartamonitor.data.models.Timeframe, percentile: Float) : Diameter {
+    fun calculateTargetDiameter(timeframe: Timeframe, percentile: Float): Diameter {
         val diameter = Diameter()
         val target: MutableList<Int> = timeframe.target
         var minValue = 0
@@ -21,7 +23,7 @@ class Calculation {
                 minValue = i
             }
         }
-        for(i in (target.size - 1)..(target.size / 2)) {
+        for (i in (target.size - 1)..(target.size / 2)) {
             if (target[i] > minY) {
                 break
             } else {
