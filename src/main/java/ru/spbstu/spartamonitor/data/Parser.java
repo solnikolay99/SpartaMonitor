@@ -234,7 +234,12 @@ public class Parser {
             switch (params[0].strip()) {
                 case "global" -> {
                     for (int i = 1; i < params.length; i += 2) {
-                        Config.globalParams.put(params[i].strip(), params[i + 1].strip());
+                        if (params[i].strip().equals("weight")) {
+                            Config.globalParams.put(params[i].strip(), params[i + 2].strip());
+                            i++;
+                        } else {
+                            Config.globalParams.put(params[i].strip(), params[i + 1].strip());
+                        }
                     }
                 }
                 case "units" -> Config.unitSystemCGS = params[1].strip().equals("cgs");
