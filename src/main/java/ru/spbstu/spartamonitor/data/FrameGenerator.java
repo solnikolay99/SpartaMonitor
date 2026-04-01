@@ -29,6 +29,7 @@ public class FrameGenerator implements Runnable {
     public List<Timeframe> timeframes = Collections.synchronizedList(new ArrayList<>());
     private static int curFrame = 0;
     public HashMap<String, List<Polygon>> surfs = new HashMap<>();
+    public static float lastSurfX = 0;
     public static HashMap<Integer, Parser.GridCell> gridSchema = new HashMap<>();
     public static HashMap<Integer, HashMap<Integer, Parser.GridCell>> inSurfSchema = new HashMap<>();
     public static HashMap<Integer, HashMap<Integer, Integer>> gridSchemaRevert = new HashMap<>();
@@ -55,6 +56,7 @@ public class FrameGenerator implements Runnable {
                     this.parser.getAllTimeFrames();
                 } catch (Exception e) {
                     System.out.println("\u001B[31m Не смогли разбить файлы дампов на группы \u001B[0m");
+                    System.out.println(e.getMessage());
                 }
 
                 this.timeframes.clear();
@@ -63,6 +65,7 @@ public class FrameGenerator implements Runnable {
                     this.parser.parsDumps(this.timeframes, startFrame, endFrame);
                 } catch (Exception e) {
                     System.out.println("\u001B[31m Не смогли распарсить файлы дампов \u001B[0m");
+                    System.out.println(e.getMessage());
                 }
 
                 Logger.releaseTimer("Get all timeframe data");
@@ -139,6 +142,7 @@ public class FrameGenerator implements Runnable {
         surfs = new HashMap<>();
         for (String filePath : Config.surfFiles) {
             ArrayList<Polygon> polygons = this.parser.parsSurfFile(Path.of(rootDir.toString(), filePath));
+            polygons.forEach(polygon -> polygon.getPoints().forEach(point -> lastSurfX = Math.max(lastSurfX, point.x)));
             if (!polygons.isEmpty()) {
                 surfs.put(filePath, polygons);
             }

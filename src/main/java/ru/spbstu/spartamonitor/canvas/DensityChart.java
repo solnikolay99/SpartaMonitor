@@ -138,8 +138,11 @@ public class DensityChart extends LineChart<String, Number> {
     public void showTargetData(FrameGenerator.Frame frame) {
         int targetPoints = 0;
         int totalPoints = 0;
+        float percentOfTotalPoints = 0;
         float targetDiameter = 0f;
+        float targetAngel = 0f;
         BigDecimal outTotalPoints = new BigDecimal(0);
+        BigDecimal outFlow = new BigDecimal(0);
         BigDecimal outTargetPoints = new BigDecimal(0);
 
         if (this.getData().isEmpty()) {
@@ -198,15 +201,28 @@ public class DensityChart extends LineChart<String, Number> {
 
         if (frame.timeframe != null) {
             totalPoints = frame.timeframe.getCountPoints();
-            outTotalPoints = new BigDecimal(Config.globalParams.get("fnum")).multiply(BigDecimal.valueOf(totalPoints));
-            outTargetPoints = new BigDecimal(Config.globalParams.get("fnum")).multiply(BigDecimal.valueOf(targetPoints));
+            outTotalPoints = new BigDecimal(Config.globalParams.get("fnum"))
+                    .multiply(Config.coeffS)
+                    .multiply(BigDecimal.valueOf(totalPoints));
+            // 100 - число в скрипте Optimizer - сколько target файлов объединяется в один
+            BigDecimal time = frame.frameNumber == 0 ? BigDecimal.ZERO : new BigDecimal(1 / (Config.tStep * frame.frameNumber * 100));
+            outFlow = outTotalPoints.multiply(time);
+            outTargetPoints = new BigDecimal(Config.globalParams.get("fnum"))
+                    .multiply(Config.coeffS)
+                    .multiply(BigDecimal.valueOf(targetPoints));
+            percentOfTotalPoints = ((float) targetPoints / (float) totalPoints) * 100;
+            targetAngel = Calculation.calculateDiameterAngel(targetDiameter, FrameGenerator.lastSurfX);
         }
 
         this.setTitle(String.format("Общее число частиц:%n" +
                         "%.2e (%d)%n" +
+                        "Соответствует потоку %.2e ат/с:%n" +
                         "Плотность частиц на мишени:%n" +
-                        "%.2e (%d)%n" +
-                        "Диаметр: %.1f мм",
-                outTotalPoints, totalPoints, outTargetPoints, targetPoints, targetDiameter));
+                        "%.2e (%d) = %.2f%%%n" +
+                        "Диаметр: %.1f мм (%.1f град.)",
+                outTotalPoints.multiply(BigDecimal.valueOf(2)), totalPoints,
+                outFlow.multiply(BigDecimal.valueOf(2)),
+                outTargetPoints.multiply(BigDecimal.valueOf(2)), targetPoints, percentOfTotalPoints,
+                targetDiameter, targetAngel));
     }
 }

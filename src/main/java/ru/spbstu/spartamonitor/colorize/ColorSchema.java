@@ -14,14 +14,28 @@ public class ColorSchema {
         colorSchema.add(Color.GREENYELLOW);
         colorSchema.add(Color.BLUE);
         colorSchema.add(Color.GOLD);
-        colorSchema.addAll(linearGradient(Color.BLUEVIOLET, Color.MEDIUMSPRINGGREEN, 116));
-        colorSchema.addAll(linearGradient(Color.MEDIUMSPRINGGREEN, Color.ORANGE, 120));
-        colorSchema.addAll(linearGradient(Color.ORANGE, Color.MAGENTA, 120));
+        colorSchema.addAll(linearGradient(Color.BLUEVIOLET, Color.MEDIUMSPRINGGREEN, 116, 1, 1));
+        colorSchema.addAll(linearGradient(Color.MEDIUMSPRINGGREEN, Color.ORANGE, 120, 1, 1));
+        colorSchema.addAll(linearGradient(Color.ORANGE, Color.MAGENTA, 120, 1, 1));
+
+//        colorSchema.addAll(linearGradient(Color.MEDIUMSPRINGGREEN, Color.MAGENTA, 116, 1, 1));
+//        colorSchema.addAll(linearGradient(Color.MAGENTA, Color.ORANGE, 120, 1, 1));
+//        colorSchema.addAll(linearGradient(Color.ORANGE, Color.BLUEVIOLET, 120, 1, 1));
+
+//        colorSchema.add(Color.BLUEVIOLET);
+//        colorSchema.add(Color.MEDIUMSPRINGGREEN);
+//        colorSchema.add(Color.MAGENTA);
+//        colorSchema.add(Color.CYAN);
     }
 
-    private static List<Color> linearGradient(Color startColor, Color endColor, int countColors) {
+    private static List<Color> linearGradient(Color startColor,
+                                              Color endColor,
+                                              int countColors,
+                                              double startOpacity,
+                                              double endOpacity) {
         List<Color> outColors = new ArrayList<>();
-        outColors.add(startColor);
+        outColors.add(startColor.deriveColor(1, 1, 1, startOpacity));
+        double opacityCoeff = endOpacity - startOpacity;
 
         for (int i = 1; i < countColors; i++) {
             int[] newColor = new int[3];
@@ -34,7 +48,7 @@ public class ColorSchema {
             newColor[0] = (int) (sRed + ((float) i / (countColors - 1)) * (eRed - sRed));
             newColor[1] = (int) (sGreen + ((float) i / (countColors - 1)) * (eGreen - sGreen));
             newColor[2] = (int) (sBlue + ((float) i / (countColors - 1)) * (eBlue - sBlue));
-            outColors.add(Color.rgb(newColor[0], newColor[1], newColor[2]));
+            outColors.add(Color.rgb(newColor[0], newColor[1], newColor[2], startOpacity + opacityCoeff * i / countColors));
         }
 
         return outColors;

@@ -1,5 +1,6 @@
 package ru.spbstu.spartamonitor.config;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,11 +29,12 @@ public class Config {
 
     // New config params
     public static String dumpDirPath = "";
-    public static final boolean parsPoints = false;
+    public static final boolean parsPoints = true;
 
     public static int defaultMultiplayer = 200;
     public static int multiplayer = defaultMultiplayer;
     public static double kB1 = 1 / 1.38067E-16;
     public static HashMap<String, String> globalParams = new HashMap<>();
     public static List<String> surfFiles = new ArrayList<>();
+    public static BigDecimal coeffS = BigDecimal.ONE;
 }

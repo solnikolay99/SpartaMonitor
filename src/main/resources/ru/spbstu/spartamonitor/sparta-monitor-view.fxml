@@ -5,6 +5,7 @@
 <?import javafx.geometry.*?>
 <?import javafx.scene.chart.*?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 <?import org.controlsfx.control.*?>
 <?import ru.spbstu.spartamonitor.canvas.*?>
@@ -22,7 +23,7 @@
                         <Insets left="42.0" />
                     </VBox.margin>
                 </MainCanvas>
-                <GraduationCanvas fx:id="graduationCanvas" height="80.0" width="1500.0">
+                <GraduationCanvas fx:id="graduationCanvas" height="120.0" width="1500.0">
                     <VBox.margin>
                         <Insets left="42.0" />
                     </VBox.margin>
@@ -43,15 +44,15 @@
     </VBox>
 
     <HBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
-        <TextField fx:id="textDumpFolder" text="E:\dumps_mgiv_ci" />
+        <TextField fx:id="textDumpFolder" text="E:\dumps" />
         <Button fx:id="buttonDumpFolder" mnemonicParsing="false" onAction="#onButtonDumpFolderClick" text="Папка с дампом" />
         <Separator orientation="VERTICAL" prefHeight="6.0" HBox.hgrow="NEVER" />
         <VBox alignment="CENTER_LEFT" spacing="20.0" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
             <HBox alignment="CENTER_LEFT" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
                 <Label text="C " />
-                <TextField fx:id="startFrameNumber" prefWidth="60.0" text="0" />
+                <TextField fx:id="startFrameNumber" prefWidth="60.0" text="98" />
                 <Label text=" по " />
-                <TextField fx:id="endFrameNumber" prefWidth="60.0" text="10" />
+                <TextField fx:id="endFrameNumber" prefWidth="60.0" text="102" />
             </HBox>
             <HBox alignment="CENTER_LEFT" xmlns="http://javafx.com/javafx/17.0.2-ea" xmlns:fx="http://javafx.com/fxml/1">
                 <Label text="Текущий " />
@@ -81,6 +82,8 @@
                     <String fx:value="Bind to procs" />
                     <String fx:value="N count" />
                     <String fx:value="Nrho count CGS" />
+                    <String fx:value="Длина свободного пробега" />
+                    <String fx:value="Число Кнудсена" />
                     <String fx:value="Разница давлений" />
                     <String fx:value="Разница полных давлений" />
                     <String fx:value="Разница концентраций" />

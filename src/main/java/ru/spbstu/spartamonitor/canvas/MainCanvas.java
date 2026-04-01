@@ -4,6 +4,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
@@ -18,6 +19,7 @@ import ru.spbstu.spartamonitor.eventbus.EventBusFactory;
 import ru.spbstu.spartamonitor.events.DrawDensityEvent;
 import ru.spbstu.spartamonitor.events.DrawEvent;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,18 +63,25 @@ public class MainCanvas extends Canvas {
             colorizeCells(frame, colorizeType);
         }
 
+//        drawSchliren();
+
         drawTitle(title);
     }
 
     protected void drawAxes() {
         GraphicsContext gc = this.getGraphicsContext2D();
-        gc.setFill(Color.GRAY);
+        gc.setFill(Color.BLACK);
 
+        int minY = Math.min(shiftBoxY + mainBoxY, defaultBoxY);
         for (int i = 0; i <= shapeX; i++) {
-            gc.fillRect(i * multiplayer - 1, shiftBoxY + mainBoxY - 6, 1, 6);
+            gc.fillRect(i * multiplayer - 1, minY - 16, 1, 5);
         }
         for (int i = 0; i <= shapeX; i += 5) {
-            gc.fillRect(i * multiplayer - 1, shiftBoxY + mainBoxY - 10, 1, 10);
+            gc.fillRect(i * multiplayer - 1, minY - 20, 1, 9);
+        }
+        gc.fillText("cm", 0, minY);
+        for (int i = 1; i < shapeX; i++) {
+            gc.fillText(String.valueOf(i), i * multiplayer - 4, minY);
         }
     }
 
@@ -88,7 +97,8 @@ public class MainCanvas extends Canvas {
     protected void drawTitle(String title) {
         GraphicsContext gc = this.getGraphicsContext2D();
 
-        int middle = (int) gc.getCanvas().getWidth() / 2;
+//        int middle = (int) gc.getCanvas().getWidth() / 2;
+        int middle = defaultBoxX / 2;
         gc.setFill(Color.LIGHTGRAY);
         gc.fillRect(middle - 50, 0, 100, 22);
         gc.setFill(Color.WHITE);
@@ -119,6 +129,19 @@ public class MainCanvas extends Canvas {
 
         drawAxes();
         drawZoom();
+    }
+
+    public void drawSchliren() {
+        GraphicsContext gc = this.getGraphicsContext2D();
+        gc.setImageSmoothing(true);
+        double canvasHeight = gc.getCanvas().getHeight();
+        File f = new File("E:\\Modeling_results\\Сравнение с реальным напуском Азот Кислород\\Scaled_photo.png");
+        Image bgImage = new Image(f.toURI().toString());
+        double bgX = 0;
+        double bgY = canvasHeight / 2 - bgImage.getHeight() / 2 - 6;
+        gc.setGlobalAlpha(0.65f);
+        gc.drawImage(bgImage, bgX, bgY, bgImage.getWidth(), bgImage.getHeight());
+        gc.setGlobalAlpha(1.0f);
     }
 
     protected Float getDiffByDulov(FrameGenerator.Frame frame, int cellId) {
@@ -165,19 +188,30 @@ public class MainCanvas extends Canvas {
             case BIND -> (float) frame.timeframe.getGrid().getProcs().get(cellId);
             case N_COUNT -> frame.timeframe.getGrid().getCells().get(cellId)[5];
             case NRHO -> frame.timeframe.getGrid().getCells().get(cellId)[6];
+            case MEAN_FREE_PATH -> frame.timeframe.getGrid().getCells().get(cellId)[8];
+            case KNUDSEN_VALUE -> frame.timeframe.getGrid().getCells().get(cellId)[9];
             case DENSITY_STATIC_DIF, DENSITY_DYNAMIC_DIF, NRHO_DIF -> getDiffByDulov(frame, cellId);
             case NRHO_DULOV -> getDulovData(cellId);
             case DENSITY_DYNAMIC -> frame.timeframe.getGrid().getCells().get(cellId)[7];
         };
 
+        int countColors = Math.min(colorizeType.countColors, colorSchema.size());
         if (value == null) {
             return null;
         } else if (value > colorizeType.maxValue) {
-            return colorSchema.getLast();
+            return colorSchema.get(countColors - 1);
         } else if (value < colorizeType.minValue) {
             return colorSchema.getFirst();
         }
-        return colorSchema.get((int) (value * (colorSchema.size() - 1) / (colorizeType.maxValue - colorizeType.minValue)));
+
+        int colorNumber;
+        if (colorizeType.exponential) {
+            colorNumber = Math.max(0, (int) Math.log((double) value));
+        } else {
+            colorNumber = (int) (value * countColors / (colorizeType.maxValue - colorizeType.minValue));
+        }
+        colorNumber = Math.min(colorNumber, countColors - 1);
+        return colorSchema.get(colorNumber);
     }
 
     protected void colorizePoints(FrameGenerator.Frame frame, ColorizeType colorizeType) {
@@ -267,7 +301,7 @@ public class MainCanvas extends Canvas {
             mainBoxY = (int) (defaultBoxY * this.getZoom());
         }
 
-        shiftBoxX -= (int) event.getDeltaY();
+        shiftBoxX -= (int) event.getDeltaX();
         if (shiftBoxX > 0) {
             shiftBoxX = 0;
         }
@@ -394,6 +428,22 @@ public class MainCanvas extends Canvas {
                                 cellValue = frameCells.get(gridCell.cellId)[7];
                             }
                         }
+                    } else if (curColorizeType == ColorizeType.MEAN_FREE_PATH) {
+                        if (frameCells.get(gridCell.cellId)[8] < Float.MAX_VALUE) {
+                            cellSumValue += frameCells.get(gridCell.cellId)[8];
+                            countCellsWithValue++;
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells.get(gridCell.cellId)[8];
+                            }
+                        }
+                    } else if (curColorizeType == ColorizeType.KNUDSEN_VALUE) {
+                        if (frameCells.get(gridCell.cellId)[9] < Float.MAX_VALUE) {
+                            cellSumValue += frameCells.get(gridCell.cellId)[9];
+                            countCellsWithValue++;
+                            if (gridCell.yLo <= surfY && gridCell.yHi >= surfY) {
+                                cellValue = frameCells.get(gridCell.cellId)[9];
+                            }
+                        }
                     }
                 }
             }
@@ -444,6 +494,14 @@ public class MainCanvas extends Canvas {
                         if (frameCells.get(cellId)[7] > 0f) {
                             cellValue = frameCells.get(cellId)[7];
                         }
+                    } else if (curColorizeType == ColorizeType.MEAN_FREE_PATH) {
+                        if (frameCells.get(cellId)[8] < Float.MAX_VALUE) {
+                            cellValue = frameCells.get(cellId)[8];
+                        }
+                    } else if (curColorizeType == ColorizeType.KNUDSEN_VALUE) {
+                        if (frameCells.get(cellId)[9] < Float.MAX_VALUE) {
+                            cellValue = frameCells.get(cellId)[9];
+                        }
                     }
                 }
             }
@@ -451,15 +509,9 @@ public class MainCanvas extends Canvas {
 
         countCells = countCells == 0 ? 1 : countCells;
         countCellsWithValue = countCellsWithValue == 0 ? 1 : countCellsWithValue;
-        String formattedCellValue = cellValue > 100000F ?
-                String.format("%.2e", cellValue) :
-                String.format("%.1f", cellValue);
-        String formattedCellSumValue = (cellSumValue / countCells) > 100000F ?
-                String.format("%.2e", cellSumValue / countCells) :
-                String.format("%.1f", cellSumValue / countCells);
-        String formattedPerCellSumValue = (cellSumValue / countCellsWithValue) > 100000F ?
-                String.format("%.2e", cellSumValue / countCellsWithValue) :
-                String.format("%.1f", cellSumValue / countCellsWithValue);
+        String formattedCellValue = getFormatedValue(cellValue);
+        String formattedCellSumValue = getFormatedValue(cellSumValue / countCells);
+        String formattedPerCellSumValue = getFormatedValue(cellSumValue / countCellsWithValue);
         String text = String.format("%.3f - %.3f см: %s | %s | %s %s",
                 (float) surfX / 1000,
                 (float) surfX1 / 1000,
@@ -477,5 +529,20 @@ public class MainCanvas extends Canvas {
         gc.fillText(text, canvasX - ((float) text.length() * 5 / 2), 15);
 
         EventBusFactory.getEventBus().post(new DrawDensityEvent((float) surfX / 1000));
+    }
+
+    private String getFormatedValue(float value) {
+        String formattedValue;
+
+        if (value > 1E5 || value < 0.001) {
+            formattedValue = String.format("%.2e", value);
+        } else if (value < 0.01) {
+            formattedValue = String.format("%.3f", value);
+        } else if (value < 0.1) {
+            formattedValue = String.format("%.2f", value);
+        } else {
+            formattedValue = String.format("%.1f", value);
+        }
+        return formattedValue;
     }
 }

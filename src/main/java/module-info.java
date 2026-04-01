@@ -12,6 +12,8 @@ module ru.spbstu.spartamonitor {
     requires com.almasb.fxgl.all;
     requires java.desktop;
     requires com.google.common;
+    requires javafx.graphics;
+//    requires ru.spbstu.spartamonitor;
 
     opens ru.spbstu.spartamonitor to javafx.fxml;
     exports ru.spbstu.spartamonitor;

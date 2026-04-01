@@ -1,5 +1,6 @@
 package ru.spbstu.spartamonitor.calculate;
 
+import ru.spbstu.spartamonitor.config.Config;
 import ru.spbstu.spartamonitor.data.models.Timeframe;
 
 import java.util.Arrays;
@@ -46,5 +47,11 @@ public class Calculation {
         diameter.rightBorder = maxvalue * reducer;
 
         return diameter;
+    }
+
+    public static float calculateDiameterAngel(float diameter, float lastSurfX) {
+        float radius = diameter / 2 / 10;
+        float xLength = Config.shapeX - lastSurfX;
+        return (float) Math.toDegrees(Math.atan2(radius, xLength));
     }
 }

@@ -15,6 +15,7 @@ import ru.spbstu.spartamonitor.canvas.MainCanvas;
 import ru.spbstu.spartamonitor.colorize.ColorizeType;
 import ru.spbstu.spartamonitor.config.Config;
 import ru.spbstu.spartamonitor.data.FrameGenerator;
+import ru.spbstu.spartamonitor.data.models.Grid;
 import ru.spbstu.spartamonitor.eventbus.EventBusFactory;
 import ru.spbstu.spartamonitor.events.DrawEvent;
 import ru.spbstu.spartamonitor.logger.Logger;
@@ -153,6 +154,7 @@ public class SpartaMonitorController {
         }
 
         animationCanvas.drawMask(frameGenerator);
+//        animationCanvas.drawSchliren();
         graduationCanvas.colorize(ColorizeType.DENSITY_STATIC);
 
         frameGenerator.preloadTimeFrames(Integer.parseInt(this.startFrameNumber.getText()),
@@ -258,10 +260,12 @@ public class SpartaMonitorController {
             case 6 -> colorizeType = ColorizeType.BIND;
             case 7 -> colorizeType = ColorizeType.N_COUNT;
             case 8 -> colorizeType = ColorizeType.NRHO;
-            case 9 -> colorizeType = ColorizeType.DENSITY_STATIC_DIF;
-            case 10 -> colorizeType = ColorizeType.DENSITY_DYNAMIC_DIF;
-            case 11 -> colorizeType = ColorizeType.NRHO_DIF;
-            case 12 -> colorizeType = ColorizeType.NRHO_DULOV;
+            case 9 -> colorizeType = ColorizeType.MEAN_FREE_PATH;
+            case 10 -> colorizeType = ColorizeType.KNUDSEN_VALUE;
+            case 11 -> colorizeType = ColorizeType.DENSITY_STATIC_DIF;
+            case 12 -> colorizeType = ColorizeType.DENSITY_DYNAMIC_DIF;
+            case 13 -> colorizeType = ColorizeType.NRHO_DIF;
+            case 14 -> colorizeType = ColorizeType.NRHO_DULOV;
         }
         graduationCanvas.colorize(colorizeType);
         EventBusFactory.getEventBus().post(new DrawEvent(0));
@@ -278,6 +282,19 @@ public class SpartaMonitorController {
         frameGenerator.saveDulovsData(Path.of(this.textDumpFolder.getText()));
     }
 
+    private void changeColorizeTypeBorder(FrameGenerator.Frame frame) {
+        Grid grid = frame.timeframe.getGrid();
+        ColorizeType.changeBorders(ColorizeType.DENSITY_STATIC, grid.maxPressure);
+        ColorizeType.changeBorders(ColorizeType.TEMPERATURE, grid.maxTemperature);
+        ColorizeType.changeBorders(ColorizeType.VELOCITY, grid.maxU);
+        ColorizeType.changeBorders(ColorizeType.SOUND_VELOCITY, grid.maxCs);
+        ColorizeType.changeBorders(ColorizeType.MACH, grid.maxMach);
+        ColorizeType.changeBorders(ColorizeType.N_COUNT, grid.maxNCount);
+        ColorizeType.changeBorders(ColorizeType.NRHO, grid.maxNrho);
+        ColorizeType.changeBorders(ColorizeType.DENSITY_DYNAMIC, grid.maxPDynamic);
+        graduationCanvas.colorize(graduationCanvas.curColorizeType);
+    }
+
     public void drawIteration(int playDirection) {
         if (drawIterationFinished && (frameGenerator.isRunning || frameGenerator.showOneIteration)) {
             drawIterationFinished = false;
@@ -290,6 +307,8 @@ public class SpartaMonitorController {
             frameGenerator.showOneIteration = Boolean.FALSE;
 
             Logger.startTimer("Draw iteration");
+
+//            changeColorizeTypeBorder(frame);
 
             String title = String.format("%.0f мкс", (frame.frameNumber) * (tStep / 1e-6 * 100));
             animationCanvas.drawIteration(this.frameGenerator, frame, colorizeType, drawByPoints, title);

@@ -11,6 +11,7 @@ import ru.spbstu.spartamonitor.logger.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -34,6 +35,11 @@ public class Parser {
      */
     float gamma = 5f / 3f; // показатель адиабаты
     float R = 2077f; // универсальная газовая постоянная для He (в Дж / (кг * К))
+    float gammaR = gamma * R;
+    float float2d3 = 2f / 3f;
+    double piSquare2 = Math.PI * Math.sqrt(2);
+    double kB = 1.38e-23; // постоянная Больцмана (СИ)
+    double dParticle = 4.07e-10;
 
     public Parser() {
     }
@@ -163,25 +169,45 @@ public class Parser {
         for (int i = 9; i < fileLines.size(); i++) {
             String[] params = fileLines.get(i).split(" ");
             float temperature = Float.parseFloat(params[tIndex]);
-            float cs = (float) Math.sqrt(gamma * R * temperature);
-            float u = Math.abs(Float.parseFloat(params[vIndex]) / (Config.unitSystemCGS ? 100 : 1));
+            float cs = (float) Math.sqrt(gammaR * temperature);
+            float u = Math.abs(Float.parseFloat(params[vIndex]) * (Config.unitSystemCGS ? 0.01f : 1));
             float nrho = nrhoIndex == -1 ? 0f: Float.parseFloat(params[nrhoIndex]);
             float pDynamic = keIndex == -1 || nrhoIndex == -1 ? 0f
-                    : (2f / 3f * Float.parseFloat(params[keIndex]) * nrho) / (Config.unitSystemCGS ? 10 : 1);
+                    : (float2d3 * Float.parseFloat(params[keIndex]) * nrho) * (Config.unitSystemCGS ? 0.1f : 1);
+
+            float pressure = Float.parseFloat(params[pIndex]) * (Config.unitSystemCGS ? 0.1f : 1);
+            float mach = u / cs;
+            float nCount = nIndex != -1 ? Float.parseFloat(params[nIndex]) : 0f;
+            nrho = Config.unitSystemCGS ? nrho : (float) (nrho * 1e-6);
+//            float meanFreePath = (float) ((kB * temperature) / (piSquare2 * (dParticle * dParticle) * pressure));
+            float meanFreePath = (float) (1 / (piSquare2 * (dParticle * dParticle) * (Config.unitSystemCGS ? nrho : nrho * 1e6)));
+            float knudsenValue = meanFreePath / (Config.spartaCellSize / 100);
+
             grid.addCell(
                     Integer.parseInt(params[idIndex]),
                     new float[]{
-                            Float.parseFloat(params[pIndex]) / (Config.unitSystemCGS ? 10 : 1),   // density in grid (SI - in Pa, CGS - in barye)
+                            pressure,                               // pressure in grid (SI - in Pa, CGS - in barye)
                             temperature,                            // temperature in grid
                             u,                                      // directed velocity by x in grid
                             cs,                                     // sound velocity
-                            u / cs,                                 // Mach value
-                            nIndex != -1 ? Float.parseFloat(params[nIndex]) : 0f,       // Count particles in cell (N count)
-                            Config.unitSystemCGS ? nrho : (float) (nrho / 1e6), // Nrho in cell
+                            mach,                                   // Mach value
+                            nCount,                                 // Count particles in cell (N count)
+                            nrho,                                   // Nrho in cell
                             pDynamic,                               // dynamic density in grid (SI - in Pa, CGS - in barye)
+                            meanFreePath,                           // mean free path
+                            knudsenValue,                           // Knudsen value
                     }
             );
             grid.bindProc(Integer.parseInt(params[idIndex]), idProc == -1 ? 0 : Integer.parseInt(params[idProc]));
+
+            grid.maxPressure = Math.max(grid.maxPressure, pressure);
+            grid.maxTemperature = Math.max(grid.maxTemperature, pressure);
+            grid.maxU = Math.max(grid.maxU, pressure);
+            grid.maxCs = Math.max(grid.maxCs, pressure);
+            grid.maxMach = Math.max(grid.maxMach, pressure);
+            grid.maxNCount = Math.max(grid.maxNCount, pressure);
+            grid.maxNrho = Math.max(grid.maxNrho, pressure);
+            grid.maxPDynamic = Math.max(grid.maxPDynamic, pressure);
         }
 
         fileLines.clear();
@@ -232,6 +258,7 @@ public class Parser {
                 continue;
             }
             switch (params[0].strip()) {
+                case "coeff_s" -> Config.coeffS = new BigDecimal(params[1].strip());
                 case "global" -> {
                     for (int i = 1; i < params.length; i += 2) {
                         if (params[i].strip().equals("weight")) {
